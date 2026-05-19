@@ -1,0 +1,32 @@
+services:
+  - type: web
+    name: mrtung-python-quant-engine
+    env: docker
+    repo: https://github.com/tungtrading260207/mrtungdna-182a2d02.git
+    branch: main
+    plan: free
+    dockerfilePath: Dockerfile
+    buildCommand: docker build -t mrtung-python-engine .
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_KEY
+        sync: false
+      - key: SUPABASE_DB_URL
+        sync: false
+      - key: COINGLASS_API_KEY
+        sync: false
+      - key: VN_STOCK_API_URL
+        sync: false
+      - key: VN_STOCK_API_KEY
+        sync: false
+      - key: VN_STOCK_SOURCE
+        value: 'DNS'
+        sync: false
+      - key: BINANCE_RATE_LIMIT_SECONDS_MIN
+        value: '3'
+        sync: false
+      - key: BINANCE_RATE_LIMIT_SECONDS_MAX
+        value: '5'
+        sync: false
