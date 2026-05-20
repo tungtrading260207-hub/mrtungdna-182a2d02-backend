@@ -28,15 +28,32 @@ class MarketAnalysisEngine:
         if not rows:
             return []
 
-        supabase_url = os.getenv("SUPABASE_URL")
-        supabase_key = os.getenv("SUPABASE_SERVICE_KEY") or os.getenv("SUPABASE_KEY")
+        # Support multiple environment variable names (Render vs Vite local names)
+        supabase_url = (
+            os.getenv("SUPABASE_URL")
+            or os.getenv("VITE_SUPABASE_URL")
+            or (str(getattr(settings, "supabase_url", "")) if getattr(settings, "supabase_url", None) else None)
+        )
+
+        supabase_key = (
+            os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+            or os.getenv("SUPABASE_SERVICE_KEY")
+            or os.getenv("SUPABASE_KEY")
+            or os.getenv("VITE_SUPABASE_PUBLISHABLE_KEY")
+            or os.getenv("VITE_SUPABASE_ANON_KEY")
+            or (getattr(settings, "supabase_service_key", None))
+        )
+
+        # Schema for PostgREST (default public). If your tables live in another schema, set SUPABASE_SCHEMA.
+        schema = os.getenv("SUPABASE_SCHEMA") or os.getenv("POSTGREST_SCHEMA") or "public"
 
         if not supabase_url or not supabase_key:
             logging.error(
-                "Supabase credentials missing. SUPABASE_URL=%s, SERVICE_KEY=%s, KEY=%s",
+                "Supabase credentials missing. SUPABASE_URL=%s, SERVICE_ROLE=%s, SERVICE_KEY=%s, ANON=%s",
                 bool(supabase_url),
+                bool(os.getenv("SUPABASE_SERVICE_ROLE_KEY")),
                 bool(os.getenv("SUPABASE_SERVICE_KEY")),
-                bool(os.getenv("SUPABASE_KEY")),
+                bool(os.getenv("VITE_SUPABASE_ANON_KEY") or os.getenv("VITE_SUPABASE_PUBLISHABLE_KEY")),
             )
             raise RuntimeError("Supabase credentials are not set in environment variables")
 
@@ -50,6 +67,9 @@ class MarketAnalysisEngine:
             "Authorization": f"Bearer {supabase_key}",
             "Content-Type": "application/json",
             "Prefer": "return=minimal",
+            "Accept": "application/json",
+            "Accept-Profile": schema,
+            "Content-Profile": schema,
         }
 
         try:
@@ -60,11 +80,26 @@ class MarketAnalysisEngine:
                     json=rows,
                     params={"on_conflict": conflict},
                 )
+                # If 404 occurs, include schema/table guidance in logs
+                if response.status_code == 404:
+                    logging.error(
+                        "[MarketAnalysis] Supabase REST returned 404 for %s. URL=%s. Schema=%s. Check table name spelling or schema placement.",
+                        table,
+                        url,
+                        schema,
+                    )
                 response.raise_for_status()
         except Exception as exc:
+            # Attempt to extract response details when available
             message = str(exc)
-            if hasattr(exc, "response") and exc.response is not None:
-                message = f"{exc} - status={exc.response.status_code} body={exc.response.text}"
+            try:
+                resp = exc.response if hasattr(exc, "response") else None
+                if resp is None and 'response' in locals():
+                    resp = locals().get('response')
+                if resp is not None:
+                    message = f"{exc} - status={getattr(resp, 'status_code', None)} body={getattr(resp, 'text', None)}"
+            except Exception:
+                pass
             logging.error("[MarketAnalysis] Supabase upsert failed for table %s: %s", table, message)
             raise
         return []
