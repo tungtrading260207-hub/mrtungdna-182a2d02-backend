@@ -41,9 +41,9 @@ class MarketAnalysisEngine:
 
     async def fetch_binance_tickers(self) -> list[dict]:
         async with AsyncClient(timeout=30.0) as client:
-            response = await client.get("https://api.binance.com/api/v3/ticker/24hr", params={"limit": 500})
+            response = await client.get("https://api.binance.com/api/v3/ticker/24hr")
             response.raise_for_status()
-            data = response.json()
+            data = response.json()[:500]
 
         return [
             item for item in data

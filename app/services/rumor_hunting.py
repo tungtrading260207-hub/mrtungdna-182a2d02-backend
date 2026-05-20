@@ -50,10 +50,10 @@ class AdvancedRumorHunting:
 
     async def fetch_binance_snapshot(self) -> list[dict]:
         async with AsyncClient(timeout=30.0) as client:
-            response = await client.get("https://api.binance.com/api/v3/ticker/24hr", params={"limit": 500})
+            response = await client.get("https://api.binance.com/api/v3/ticker/24hr")
             response.raise_for_status()
             await anti_429_delay()
-            return response.json()
+            return response.json()[:500]
 
     async def fetch_coinglass_data(self, symbol: str) -> dict | None:
         if not settings.coinglass_api_key:

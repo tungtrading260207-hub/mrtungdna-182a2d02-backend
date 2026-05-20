@@ -32,10 +32,10 @@ class AntiTrapShortEngine:
 
     async def fetch_symbols(self) -> list[str]:
         async with AsyncClient(timeout=30.0) as client:
-            response = await client.get("https://api.binance.com/api/v3/ticker/24hr", params={"limit": 200})
+            response = await client.get("https://api.binance.com/api/v3/ticker/24hr")
             response.raise_for_status()
             await anti_429_delay()
-            tickers = response.json()
+            tickers = response.json()[:200]
 
         filtered = [
             item["symbol"]
