@@ -80,9 +80,11 @@ class MacroDataSchedulerWorker(WorkerBase):
         self.engine = MacroDataScheduler(self.supabase_client)
 
     async def start_loop(self):
+        # Initial delay to avoid immediate external API calls (e.g., CoinGecko rate limits)
+        await asyncio.sleep(300)
         while True:
             await self._run_cycle()
-            await asyncio.sleep(3600)
+            await asyncio.sleep(self.interval_seconds)
 
 
 from .vietnam_stock_worker import VietnamStockWorker
