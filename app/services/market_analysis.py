@@ -27,7 +27,16 @@ class MarketAnalysisEngine:
 
         base_url = str(settings.supabase_url).rstrip("/")
         url = f"{base_url}/rest/v1/{table}"
-        headers = self._supabase_headers()
+        
+        # SỬA TẠI ĐÂY: Mượn thẳng headers bảo mật chuẩn đã thông chốt của client hệ thống
+        if hasattr(self.supabase_client, 'client') and hasattr(self.supabase_client.client, 'headers'):
+            headers = dict(self.supabase_client.client.headers)
+        else:
+            headers = self._supabase_headers()
+            
+        # Đảm bảo có đủ thuộc tính Prefer để tối ưu hóa tốc độ ghi dữ liệu của Supabase
+        headers["Prefer"] = "return=minimal"
+
         async with AsyncClient(timeout=30.0) as client:
             response = await client.post(
                 url,
