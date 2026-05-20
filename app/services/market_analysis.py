@@ -125,17 +125,31 @@ class MarketAnalysisEngine:
 
         signal_items = [self.build_signal_record(item) for item in scan_items if item["signal"] in {"GOLDEN", "ACCUMULATE"}]
 
-        # Loại bỏ trường 'ai_note' và chỉ gửi payload tối thiểu để tránh lỗi 400 Bad Request
-        scan_fields = {"ticker", "market", "price", "change24h", "score", "signal", "structure", "note", "updated_at"}
+        # Loại bỏ trường 'ai_note' và gửi payload khớp đúng cột Supabase
         scans_to_db = [
-            {k: v for k, v in item.items() if k in scan_fields and v is not None}
+            {
+                "id": str(item.get("ticker", "")),
+                "symbol": item.get("ticker"),
+                "score": item.get("score"),
+                "price": item.get("price"),
+                "volume": item.get("volume"),
+                "signal": item.get("signal"),
+                "timestamp": item.get("updated_at"),
+            }
             for item in scan_items
         ]
 
-        signal_fields = {"ticker", "market", "entry_price", "score", "signal_type", "note", "created_at"}
         signals_to_db = [
-            {k: v for k, v in item.items() if k in signal_fields and v is not None}
-            for item in signal_items
+            {
+                "id": f"{item.get('ticker', '')}_{item.get('signal', '')}",
+                "symbol": item.get("ticker"),
+                "signal": item.get("signal"),
+                "score": item.get("score"),
+                "price": item.get("price"),
+                "timestamp": item.get("updated_at"),
+            }
+            for item in scan_items
+            if item["signal"] in {"GOLDEN", "ACCUMULATE"}
         ]
 
         logging.info("[MarketAnalysis] Writing %d market scans to Supabase", len(scans_to_db))
