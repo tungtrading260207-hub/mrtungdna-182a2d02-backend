@@ -29,18 +29,13 @@ class MarketAnalysisEngine:
             return []
 
         supabase_url = os.getenv("SUPABASE_URL")
-        supabase_key = (
-            os.getenv("SUPABASE_SERVICE_KEY")
-            or os.getenv("SUPABASE_SERVICE_ROLE_KEY")
-            or os.getenv("SUPABASE_KEY")
-        )
+        supabase_key = os.getenv("SUPABASE_SERVICE_KEY") or os.getenv("SUPABASE_KEY")
 
         if not supabase_url or not supabase_key:
             logging.error(
-                "Supabase credentials missing. SUPABASE_URL=%s, SERVICE_KEY=%s, SERVICE_ROLE_KEY=%s, KEY=%s",
+                "Supabase credentials missing. SUPABASE_URL=%s, SERVICE_KEY=%s, KEY=%s",
                 bool(supabase_url),
                 bool(os.getenv("SUPABASE_SERVICE_KEY")),
-                bool(os.getenv("SUPABASE_SERVICE_ROLE_KEY")),
                 bool(os.getenv("SUPABASE_KEY")),
             )
             raise RuntimeError("Supabase credentials are not set in environment variables")
