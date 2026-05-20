@@ -20,6 +20,18 @@ rumor_worker: RumorHuntingWorker | None = None
 anti_short_worker: AntiTrapShortWorker | None = None
 analysis_worker: MarketDataAnalysisWorker | None = None
 
+
+# ==================== ĐOẠN THÊM MỚI VÀO ĐÂY ====================
+@app.get("/")
+async def read_root():
+    return {
+        "status": "ok",
+        "message": "Mr Tung Python Quant Engine is running smoothly!",
+        "uptime_robot_status": "connected"
+    }
+# =============================================================
+
+
 @app.on_event("startup")
 async def startup_event():
     global rumor_worker, anti_short_worker, analysis_worker
