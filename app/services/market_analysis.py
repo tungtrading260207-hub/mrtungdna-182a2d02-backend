@@ -125,31 +125,10 @@ class MarketAnalysisEngine:
 
         signal_items = [self.build_signal_record(item) for item in scan_items if item["signal"] in {"GOLDEN", "ACCUMULATE"}]
 
-<<<<<<< HEAD
-# Loại bỏ trường 'ai_note' trực tiếp tại đây để tránh lỗi 400 Bad Request trên Supabase
-        scans_to_db = [{k: v for k, v in item.items() if k != 'ai_note' and v is not None} for item in scan_items]
-        signals_to_db = [{k: v for k, v in item.items() if k != 'ai_note' and v is not None} for item in signal_items]
-=======
-# Loại bỏ trường 'ai_note' và ÉP TẠO ID CHUẨN ĐỂ ĐẬP TAN LỖI 400 ON_CONFLICT
-        scans_to_db = []
-        for item in scan_items:
-            clean_item = {k: v for k, v in item.items() if k != 'ai_note'}
-            # Nếu trong build_scan_record quên chưa gán id, lấy luôn symbol làm id
-            if not clean_item.get('id'):
-                clean_item['id'] = str(clean_item.get('symbol', 'UNKNOWN'))
-            scans_to_db.append(clean_item)
+        # Loại bỏ trường 'ai_note' trực tiếp tại đây để tránh lỗi 400 Bad Request trên Supabase
+        scans_to_db = [{k: v for k, v in item.items() if k != 'ai_note'} for item in scan_items]
+        signals_to_db = [{k: v for k, v in item.items() if k != 'ai_note'} for item in signal_items]
 
-        signals_to_db = []
-        for item in signal_items:
-            clean_item = {k: v for k, v in item.items() if k != 'ai_note'}
-            # Tự động sinh ID duy nhất cho bảng tín hiệu (Ví dụ: BTCUSDT_GOLDEN)
-            if not clean_item.get('id'):
-                sym = clean_item.get('symbol', 'UNKNOWN')
-                sig = clean_item.get('signal', 'NONE')
-                clean_item['id'] = f"{sym}_{sig}"
-            signals_to_db.append(clean_item)
-
->>>>>>> d58af00067e1b094402f3a1aad6f3fa6a9c8978b
         logging.info("[MarketAnalysis] Writing %d market scans to Supabase", len(scans_to_db))
         await self.supabase_client.upsert_rows("market_scans", scans_to_db, conflict="id")
 
