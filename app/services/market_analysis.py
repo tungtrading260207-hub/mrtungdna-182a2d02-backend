@@ -29,13 +29,25 @@ class MarketAnalysisEngine:
             return []
 
         supabase_url = os.getenv("SUPABASE_URL")
-        supabase_key = os.getenv("SUPABASE_SERVICE_KEY") or os.getenv("SUPABASE_KEY")
+        supabase_key = (
+            os.getenv("SUPABASE_SERVICE_KEY")
+            or os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+            or os.getenv("SUPABASE_KEY")
+        )
 
         if not supabase_url or not supabase_key:
-            logging.error("Supabase credentials missing. SUPABASE_URL=%s, key_present=%s", bool(supabase_url), bool(supabase_key))
+            logging.error(
+                "Supabase credentials missing. SUPABASE_URL=%s, SERVICE_KEY=%s, SERVICE_ROLE_KEY=%s, KEY=%s",
+                bool(supabase_url),
+                bool(os.getenv("SUPABASE_SERVICE_KEY")),
+                bool(os.getenv("SUPABASE_SERVICE_ROLE_KEY")),
+                bool(os.getenv("SUPABASE_KEY")),
+            )
             raise RuntimeError("Supabase credentials are not set in environment variables")
 
-        base_url = str(supabase_url).rstrip("/")
+        supabase_url = str(supabase_url).strip().strip('"').strip("'")
+        supabase_key = str(supabase_key).strip().strip('"').strip("'")
+        base_url = supabase_url.rstrip("/")
         url = f"{base_url}/rest/v1/{table}"
 
         headers = {
@@ -55,7 +67,10 @@ class MarketAnalysisEngine:
                 )
                 response.raise_for_status()
         except Exception as exc:
-            logging.error("[MarketAnalysis] Supabase upsert failed for table %s: %s", table, exc)
+            message = str(exc)
+            if hasattr(exc, "response") and exc.response is not None:
+                message = f"{exc} - status={exc.response.status_code} body={exc.response.text}"
+            logging.error("[MarketAnalysis] Supabase upsert failed for table %s: %s", table, message)
             raise
         return []
 
