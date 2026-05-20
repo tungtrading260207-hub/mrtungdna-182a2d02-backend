@@ -22,34 +22,41 @@ class MarketAnalysisEngine:
         }
 
     async def _upsert_supabase(self, table: str, rows: list[dict], conflict: str):
+        import os
+        from httpx import AsyncClient
+
         if not rows:
             return []
 
-        # 1. Làm sạch URL để tránh tuyệt đối lỗi dấu xuyệt kép //
-        base_url = str(settings.supabase_url).rstrip("/")
+        supabase_url = os.getenv("SUPABASE_URL")
+        supabase_key = os.getenv("SUPABASE_SERVICE_KEY") or os.getenv("SUPABASE_KEY")
+
+        if not supabase_url or not supabase_key:
+            logging.error("Supabase credentials missing. SUPABASE_URL=%s, key_present=%s", bool(supabase_url), bool(supabase_key))
+            raise RuntimeError("Supabase credentials are not set in environment variables")
+
+        base_url = str(supabase_url).rstrip("/")
         url = f"{base_url}/rest/v1/{table}"
-        
-        # 2. Ép hệ thống dùng ĐÚNG chìa khóa vạn năng Service Key toàn cục
-        api_key = settings.supabase_service_key
-        if not api_key:
-            raise RuntimeError("Supabase service key chưa được cấu hình trong settings")
-            
+
         headers = {
-            "apikey": api_key,
-            "Authorization": f"Bearer {api_key}",
+            "apikey": supabase_key,
+            "Authorization": f"Bearer {supabase_key}",
             "Content-Type": "application/json",
-            "Prefer": "return=minimal"
+            "Prefer": "return=minimal",
         }
 
-        # 3. Thực hiện gửi dữ liệu lên Supabase với cấu hình chuẩn
-        async with AsyncClient(timeout=30.0) as client:
-            response = await client.post(
-                url,
-                headers=headers,
-                json=rows,
-                params={"on_conflict": conflict, "return": "minimal"},
-            )
-            response.raise_for_status()
+        try:
+            async with AsyncClient(timeout=30.0) as client:
+                response = await client.post(
+                    url,
+                    headers=headers,
+                    json=rows,
+                    params={"on_conflict": conflict},
+                )
+                response.raise_for_status()
+        except Exception as exc:
+            logging.error("[MarketAnalysis] Supabase upsert failed for table %s: %s", table, exc)
+            raise
         return []
 
     async def scan(self) -> list[dict]:
