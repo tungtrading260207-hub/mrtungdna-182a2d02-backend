@@ -126,37 +126,80 @@ class MarketAnalysisEngine:
         signal_items = [self.build_signal_record(item) for item in scan_items if item["signal"] in {"GOLDEN", "ACCUMULATE"}]
 
         # Loại bỏ trường 'ai_note' và gửi payload khớp đúng cột Supabase
-        scans_to_db = [
-            {
-                "id": str(item.get("ticker", "")),
-                "symbol": item.get("ticker"),
-                "score": item.get("score"),
-                "price": item.get("price"),
-                "volume": item.get("volume"),
-                "signal": item.get("signal"),
-            }
-            for item in scan_items
-        ]
+        # --- BẮT ĐẦU ĐOẠN CODE CHỐT CHẶN BẢO MẬT & BÓC TÁCH LỖI ---
+        import math
 
-        signals_to_db = [
-            {
-                "id": f"{item.get('ticker', '')}_{item.get('signal', '')}",
-                "symbol": item.get("ticker"),
-                "signal": item.get("signal"),
-                "score": item.get("score"),
-                "price": item.get("price"),
-            }
-            for item in scan_items
-            if item["signal"] in {"GOLDEN", "ACCUMULATE"}
-        ]
+        def sanitize_val(v):
+            """Làm sạch tuyệt đối rác dữ liệu từ Binance (NaN, Infinity, None)"""
+            if v is None: return "0"
+            if isinstance(v, (float, int)):
+                if math.isnan(v) or math.isinf(v): return "0"
+            return str(v).strip()
 
-        logging.info("[MarketAnalysis] Writing %d market scans to Supabase", len(scans_to_db))
-        await self.supabase_client.upsert_rows("market_scans", scans_to_db, conflict="id")
+        # 1. Build Payload Scans an toàn tuyệt đối
+        scans_to_db = []
+        for item in scan_items:
+            symbol_str = sanitize_val(item.get('symbol', 'UNKNOWN'))
+            rec_id = sanitize_val(item.get('id'))
+            if rec_id == "0" or rec_id == "": rec_id = symbol_str
 
-        logging.info("[MarketAnalysis] Writing %d market signals to Supabase", len(signals_to_db))
-        await self.supabase_client.upsert_rows("market_signals", signals_to_db, conflict="id")
+            scans_to_db.append({
+                "id": rec_id,
+                "symbol": symbol_str,
+                "score": sanitize_val(item.get('score')),
+                "price": sanitize_val(item.get('price')),
+                "volume": sanitize_val(item.get('volume')),
+                "signal": sanitize_val(item.get('signal'))
+            })
 
-        return scan_items
+        # 2. Build Payload Signals an toàn tuyệt đối
+        signals_to_db = []
+        for item in signal_items:
+            symbol_str = sanitize_val(item.get('symbol', 'UNKNOWN'))
+            sig_str = sanitize_val(item.get('signal', 'NONE'))
+            rec_id = sanitize_val(item.get('id'))
+            if rec_id == "0" or rec_id == "": rec_id = f"{symbol_str}_{sig_str}"
+
+            signals_to_db.append({
+                "id": rec_id,
+                "symbol": symbol_str,
+                "signal": sig_str,
+                "score": sanitize_val(item.get('score')),
+                "price": sanitize_val(item.get('price'))
+            })
+
+        # 3. Ghi DB với Try-Catch soi chiếu mọi góc ngách
+        try:
+            if scans_to_db:
+                logging.info("[MarketAnalysis] Writing %d market scans to Supabase", len(scans_to_db))
+                await self.supabase_client.upsert_rows("market_scans", scans_to_db, conflict="id")
+            else:
+                logging.warning("[MarketAnalysis] No scans data to write (Empty Payload).")
+        except Exception as e:
+            error_details = str(e)
+            # Bóc tách phản hồi ẩn từ Supabase (nếu có)
+            if hasattr(e, 'response') and e.response is not None:
+                try:
+                    error_details += f" | Supabase Details: {e.response.text}"
+                except Exception:
+                    pass
+            logging.error(f"[FATAL DB ERROR] Market Scans Upsert Failed: {error_details}")
+            if scans_to_db: logging.error(f"Sample Payload that caused error: {scans_to_db[0]}")
+
+        try:
+            if signals_to_db:
+                logging.info("[MarketAnalysis] Writing %d market signals to Supabase", len(signals_to_db))
+                await self.supabase_client.upsert_rows("market_signals", signals_to_db, conflict="id")
+        except Exception as e:
+            error_details = str(e)
+            if hasattr(e, 'response') and e.response is not None:
+                try:
+                    error_details += f" | Supabase Details: {e.response.text}"
+                except Exception:
+                    pass
+            logging.error(f"[FATAL DB ERROR] Market Signals Upsert Failed: {error_details}")
+
+            return scan_items
 
     async def fetch_binance_tickers(self) -> list[dict]:
         async with AsyncClient(timeout=30.0) as client:
