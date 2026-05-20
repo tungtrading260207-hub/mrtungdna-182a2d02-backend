@@ -134,7 +134,6 @@ class MarketAnalysisEngine:
                 "price": item.get("price"),
                 "volume": item.get("volume"),
                 "signal": item.get("signal"),
-                "timestamp": item.get("updated_at"),
             }
             for item in scan_items
         ]
@@ -146,7 +145,6 @@ class MarketAnalysisEngine:
                 "signal": item.get("signal"),
                 "score": item.get("score"),
                 "price": item.get("price"),
-                "timestamp": item.get("updated_at"),
             }
             for item in scan_items
             if item["signal"] in {"GOLDEN", "ACCUMULATE"}
