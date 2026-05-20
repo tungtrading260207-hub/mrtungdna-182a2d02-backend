@@ -4,4 +4,5 @@ httpx
 python-dotenv
 websockets
 pydantic
+pydantic-settings
 asyncpg

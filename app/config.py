@@ -1,5 +1,6 @@
 from pathlib import Path
-from pydantic import BaseSettings, AnyHttpUrl, Field
+from pydantic import AnyHttpUrl, Field
+from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
@@ -7,6 +8,10 @@ class Settings(BaseSettings):
     supabase_service_key: str
     supabase_db_url: str | None = None
     coinglass_api_key: str | None = None
+    gemini_api_key: str | None = None
+    lovable_api_key: str | None = None
+    news_api_key: str | None = None
+    news_api_url: str | None = None
     vn_stock_api_url: str | None = None
     vn_stock_api_key: str | None = None
     vn_stock_source: str | None = None

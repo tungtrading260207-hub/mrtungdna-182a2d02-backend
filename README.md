@@ -22,11 +22,24 @@ python -m pip install -r requirements.txt
 uvicorn main:app --host 0.0.0.0 --port 8000
 ```
 
+## Endpoints bổ sung
+- `GET /health` — kiểm tra trạng thái service
+- `POST /trigger/rumor` — chạy Rumor Hunting một lần
+- `POST /trigger/anti_short` — chạy Anti-Trap Short một lần
+- `POST /trigger/analysis` — chạy Market Data Analysis một lần
+- `POST /trigger/function/{function_name}` — gọi Supabase edge function được phép
+- `GET /tasks/status` — lấy trạng thái worker và lần quét cuối cùng
+- `GET /data/{table_name}` — lấy dữ liệu từ một số bảng Supabase được phép (`Rumor_Hunting_Top20`, `Inverse_Short_Setup`, `system_health`, `market_scans`, `market_signals`, `market_news`, `macro_indicators`)
+
 ## Biến môi trường
 - `SUPABASE_URL`
 - `SUPABASE_SERVICE_KEY`
 - `SUPABASE_DB_URL`
 - `COINGLASS_API_KEY`
+- `GEMINI_API_KEY`
+- `LOVABLE_API_KEY`
+- `NEWS_API_KEY`
+- `NEWS_API_URL`
 - `VN_STOCK_API_URL`
 - `VN_STOCK_API_KEY`
 - `VN_STOCK_SOURCE`
