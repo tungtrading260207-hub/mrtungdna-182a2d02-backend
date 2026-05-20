@@ -25,18 +25,23 @@ class MarketAnalysisEngine:
         if not rows:
             return []
 
+        # 1. Làm sạch URL để tránh tuyệt đối lỗi dấu xuyệt kép //
         base_url = str(settings.supabase_url).rstrip("/")
         url = f"{base_url}/rest/v1/{table}"
         
-        # SỬA TẠI ĐÂY: Mượn thẳng headers bảo mật chuẩn đã thông chốt của client hệ thống
-        if hasattr(self.supabase_client, 'client') and hasattr(self.supabase_client.client, 'headers'):
-            headers = dict(self.supabase_client.client.headers)
-        else:
-            headers = self._supabase_headers()
+        # 2. Ép hệ thống dùng ĐÚNG chìa khóa vạn năng Service Key toàn cục
+        api_key = settings.supabase_service_key
+        if not api_key:
+            raise RuntimeError("Supabase service key chưa được cấu hình trong settings")
             
-        # Đảm bảo có đủ thuộc tính Prefer để tối ưu hóa tốc độ ghi dữ liệu của Supabase
-        headers["Prefer"] = "return=minimal"
+        headers = {
+            "apikey": api_key,
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+            "Prefer": "return=minimal"
+        }
 
+        # 3. Thực hiện gửi dữ liệu lên Supabase với cấu hình chuẩn
         async with AsyncClient(timeout=30.0) as client:
             response = await client.post(
                 url,
