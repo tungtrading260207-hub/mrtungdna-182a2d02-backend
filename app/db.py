@@ -1,5 +1,6 @@
 import asyncpg
 import logging
+import os
 from httpx import AsyncClient
 from .config import settings
 
@@ -9,10 +10,14 @@ class SupabaseClient:
         self.base_url = str(settings.supabase_url).rstrip("/")
         self.api_key = settings.supabase_service_key
         self.postgres_url = settings.supabase_db_url
+        self.schema = os.getenv("SUPABASE_SCHEMA") or os.getenv("POSTGREST_SCHEMA") or "public"
         self.headers = {
             "apikey": self.api_key,
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",
+            "Prefer": "return=minimal",
+            "Accept-Profile": self.schema,
+            "Content-Profile": self.schema,
         }
         self._rest_client = AsyncClient(base_url=f"{self.base_url}/rest/v1", headers=self.headers, timeout=30.0)
         self._functions_client = AsyncClient(base_url=f"{self.base_url}/functions/v1", headers=self.headers, timeout=30.0)

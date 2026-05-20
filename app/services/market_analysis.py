@@ -126,10 +126,10 @@ class MarketAnalysisEngine:
         signal_items = [self.build_signal_record(item) for item in scan_items if item["signal"] in {"GOLDEN", "ACCUMULATE"}]
 
         logging.info("[MarketAnalysis] Writing %d market scans", len(scan_items))
-        await self._upsert_supabase("market_scans", scan_items, conflict="id")
+        await self.supabase_client.upsert_rows("market_scans", scan_items, conflict="id")
 
         logging.info("[MarketAnalysis] Writing %d market signals", len(signal_items))
-        await self._upsert_supabase("market_signals", signal_items, conflict="id")
+        await self.supabase_client.upsert_rows("market_signals", signal_items, conflict="id")
 
         return scan_items
 
