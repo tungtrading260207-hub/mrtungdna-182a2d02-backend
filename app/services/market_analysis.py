@@ -126,9 +126,8 @@ class MarketAnalysisEngine:
         signal_items = [self.build_signal_record(item) for item in scan_items if item["signal"] in {"GOLDEN", "ACCUMULATE"}]
 
 # Loại bỏ trường 'ai_note' trực tiếp tại đây để tránh lỗi 400 Bad Request trên Supabase
-        scans_to_db = [{k: v for k, v in item.items() if k != 'ai_note'} for item in scan_items]
-        signals_to_db = [{k: v for k, v in item.items() if k != 'ai_note'} for item in signal_items]
-
+        scans_to_db = [{k: v for k, v in item.items() if k != 'ai_note' and v is not None} for item in scan_items]
+        signals_to_db = [{k: v for k, v in item.items() if k != 'ai_note' and v is not None} for item in signal_items]
         logging.info("[MarketAnalysis] Writing %d market scans to Supabase", len(scans_to_db))
         await self.supabase_client.upsert_rows("market_scans", scans_to_db, conflict="id")
 
