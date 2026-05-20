@@ -73,15 +73,11 @@ class MarketAnalysisEngine:
 
         signal_items = [self.build_signal_record(item) for item in scan_items if item["signal"] in {"GOLDEN", "ACCUMULATE"}]
 
-        # --- BẮT ĐẦU ĐOẠN SỬA ĐỔI CHỐT HẠ ---
         logging.info("[MarketAnalysis] Writing %d market scans", len(scan_items))
-        # Dùng trực tiếp hàm hệ thống chuẩn của supabase_client thay vì gọi hàm tự chế lỗi
-        await self.supabase_client.upsert_rows("market_scans", scan_items, conflict="id")
+        await self._upsert_supabase("market_scans", scan_items, conflict="id")
 
         logging.info("[MarketAnalysis] Writing %d market signals", len(signal_items))
-        # Đồng bộ hóa ghi nhận tín hiệu thị trường bằng hàm hệ thống
-        await self.supabase_client.upsert_rows("market_signals", signal_items, conflict="id")
-        # --- KẾT THÚC ĐOẠN SỬA ĐỔI ---
+        await self._upsert_supabase("market_signals", signal_items, conflict="id")
 
         return scan_items
 
