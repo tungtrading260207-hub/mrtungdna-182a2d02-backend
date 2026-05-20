@@ -11,6 +11,32 @@ class MarketAnalysisEngine:
         self.supabase_client = supabase_client
         self.ai = AIAnalyzer(supabase_client)
 
+    def _supabase_headers(self) -> dict[str, str]:
+        api_key = settings.supabase_service_key
+        if not api_key:
+            raise RuntimeError("Supabase service key is not configured")
+        return {
+            "apikey": api_key,
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json",
+        }
+
+    async def _upsert_supabase(self, table: str, rows: list[dict], conflict: str):
+        if not rows:
+            return []
+
+        url = f"{self.supabase_client.base_url}/rest/v1/{table}"
+        headers = self._supabase_headers()
+        async with AsyncClient(timeout=30.0) as client:
+            response = await client.post(
+                url,
+                headers=headers,
+                json=rows,
+                params={"on_conflict": conflict, "return": "minimal"},
+            )
+            response.raise_for_status()
+        return []
+
     async def scan(self) -> list[dict]:
         logging.info("[MarketAnalysis] Fetching raw market data from Binance.")
         raw = await self.fetch_binance_tickers()
@@ -33,10 +59,10 @@ class MarketAnalysisEngine:
         signal_items = [self.build_signal_record(item) for item in scan_items if item["signal"] in {"GOLDEN", "ACCUMULATE"}]
 
         logging.info("[MarketAnalysis] Writing %d market scans", len(scan_items))
-        await self.supabase_client.upsert_rows("market_scans", scan_items, conflict="id")
+        await self._upsert_supabase("market_scans", scan_items, conflict="id")
 
         logging.info("[MarketAnalysis] Writing %d market signals", len(signal_items))
-        await self.supabase_client.upsert_rows("market_signals", signal_items, conflict="id")
+        await self._upsert_supabase("market_signals", signal_items, conflict="id")
 
         return scan_items
 
