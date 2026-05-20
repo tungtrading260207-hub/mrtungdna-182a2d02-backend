@@ -3,11 +3,11 @@ import logging
 from dataclasses import dataclass
 from time import perf_counter
 from datetime import datetime, timezone
-from .services.rumor_hunting import AdvancedRumorHunting
-from .services.anti_trap_short import AntiTrapShortEngine
-from .services.market_analysis import MarketAnalysisEngine
-from .services.macro_scheduler import MacroDataScheduler
-from .db import SupabaseClient
+from app.services.rumor_hunting import AdvancedRumorHunting
+from app.services.anti_trap_short import AntiTrapShortEngine
+from app.services.market_analysis import MarketAnalysisEngine
+from app.services.macro_scheduler import MacroDataScheduler
+from app.db import SupabaseClient
 
 
 @dataclass
@@ -78,6 +78,11 @@ class MacroDataSchedulerWorker(WorkerBase):
     def __init__(self, supabase_client: SupabaseClient, interval_seconds: int = 3600):
         super().__init__(supabase_client, interval_seconds)
         self.engine = MacroDataScheduler(self.supabase_client)
+
+    async def start_loop(self):
+        while True:
+            await self._run_cycle()
+            await asyncio.sleep(3600)
 
 
 from .vietnam_stock_worker import VietnamStockWorker
