@@ -4,7 +4,7 @@ from datetime import datetime
 from fastapi import FastAPI, HTTPException
 from app.config import settings
 from app.db import SupabaseClient
-from app.tasks import RumorHuntingWorker, AntiTrapShortWorker, MarketDataAnalysisWorker
+from app.tasks import RumorHuntingWorker, AntiTrapShortWorker, MarketDataAnalysisWorker, MacroDataSchedulerWorker
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
@@ -19,6 +19,7 @@ worker_tasks: list[asyncio.Task] = []
 rumor_worker: RumorHuntingWorker | None = None
 anti_short_worker: AntiTrapShortWorker | None = None
 analysis_worker: MarketDataAnalysisWorker | None = None
+macro_worker: MacroDataSchedulerWorker | None = None
 
 
 # ==================== ĐOẠN THÊM MỚI VÀO ĐÂY ====================
@@ -34,15 +35,17 @@ async def read_root():
 
 @app.on_event("startup")
 async def startup_event():
-    global rumor_worker, anti_short_worker, analysis_worker
+    global rumor_worker, anti_short_worker, analysis_worker, macro_worker
     logging.info("Starting Mr Tung Python FastAPI worker...")
     await supabase_client.init_pool()
     rumor_worker = RumorHuntingWorker(supabase_client)
     anti_short_worker = AntiTrapShortWorker(supabase_client)
     analysis_worker = MarketDataAnalysisWorker(supabase_client)
+    macro_worker = MacroDataSchedulerWorker(supabase_client)
     worker_tasks.append(asyncio.create_task(rumor_worker.start_loop()))
     worker_tasks.append(asyncio.create_task(anti_short_worker.start_loop()))
     worker_tasks.append(asyncio.create_task(analysis_worker.start_loop()))
+    worker_tasks.append(asyncio.create_task(macro_worker.start_loop()))
     logging.info("Background workers launched.")
 
 @app.on_event("shutdown")
@@ -64,9 +67,17 @@ async def health_check():
 
 @app.post("/trigger/{task_name}")
 async def trigger_task(task_name: str):
-    if task_name not in {"rumor", "anti_short"}:
+    if task_name == "rumor":
+        worker = rumor_worker
+    elif task_name == "anti_short":
+        worker = anti_short_worker
+    elif task_name == "market":
+        worker = analysis_worker
+    elif task_name == "macro":
+        worker = macro_worker
+    else:
         raise HTTPException(status_code=404, detail="Unknown task")
-    worker = rumor_worker if task_name == "rumor" else anti_short_worker
+
     if worker is None:
         raise HTTPException(status_code=503, detail="Worker not initialized")
 
@@ -85,6 +96,7 @@ async def tasks_status():
         "rumor_hunting": rumor_worker.status.__dict__ if rumor_worker else None,
         "anti_trap_short": anti_short_worker.status.__dict__ if anti_short_worker else None,
         "market_analysis": analysis_worker.status.__dict__ if analysis_worker else None,
+        "macro_scheduler": macro_worker.status.__dict__ if macro_worker else None,
     }
 
 

@@ -10,6 +10,9 @@ class VNStockSource:
         self.source_name = settings.vn_stock_source or "DNS"
 
     async def fetch_symbol_flow(self, symbol: str) -> dict | None:
+        if self.source_name == settings.dns_source_label or self.source_name == "DNS":
+            return {"source": settings.dns_source_label}
+
         if not self.base_url:
             logging.debug("[VNStockSource] No VN stock API URL configured.")
             return None
@@ -32,6 +35,9 @@ class VNStockSource:
                 return None
 
     async def fetch_market_snapshot(self) -> dict | None:
+        if self.source_name == settings.dns_source_label or self.source_name == "DNS":
+            return {"source": settings.dns_source_label}
+
         if not self.base_url:
             logging.debug("[VNStockSource] No VN stock API URL configured.")
             return None

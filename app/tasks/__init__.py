@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from .services.rumor_hunting import AdvancedRumorHunting
 from .services.anti_trap_short import AntiTrapShortEngine
 from .services.market_analysis import MarketAnalysisEngine
+from .services.macro_scheduler import MacroDataScheduler
 from .db import SupabaseClient
 
 
@@ -71,3 +72,12 @@ class MarketDataAnalysisWorker(WorkerBase):
     def __init__(self, supabase_client: SupabaseClient, interval_seconds: int = 1800):
         super().__init__(supabase_client, interval_seconds)
         self.engine = MarketAnalysisEngine(self.supabase_client)
+
+
+class MacroDataSchedulerWorker(WorkerBase):
+    def __init__(self, supabase_client: SupabaseClient, interval_seconds: int = 3600):
+        super().__init__(supabase_client, interval_seconds)
+        self.engine = MacroDataScheduler(self.supabase_client)
+
+
+from .vietnam_stock_worker import VietnamStockWorker

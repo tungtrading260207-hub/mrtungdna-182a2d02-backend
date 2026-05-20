@@ -17,6 +17,18 @@ services:
         sync: false
       - key: COINGLASS_API_KEY
         sync: false
+      - key: COINGECKO_API_KEY
+        sync: false
+      - key: LUNARCRUSH_API_KEY
+        sync: false
+      - key: ALPHA_VANTAGE_API_KEY
+        sync: false
+      - key: FRED_API_KEY
+        sync: false
+      - key: ETHERSCAN_API_KEY
+        sync: false
+      - key: DNS_API_KEY
+        sync: false
       - key: VN_STOCK_API_URL
         sync: false
       - key: VN_STOCK_API_KEY

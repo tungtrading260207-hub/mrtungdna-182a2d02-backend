@@ -19,18 +19,72 @@ class Settings(BaseSettings):
         ),
     )
     supabase_db_url: str | None = None
-    coinglass_api_key: str | None = None
-    gemini_api_key: str | None = None
+    coinglass_api_key: str | None = Field(
+        None,
+        validation_alias=AliasChoices("coinglass_api_key", "COINGLASS_API_KEY", "VITE_COINGLASS_API_KEY"),
+    )
+    gemini_api_key: str | None = Field(
+        None,
+        validation_alias=AliasChoices("gemini_api_key", "GEMINI_API_KEY", "VITE_GEMINI_API_KEY"),
+    )
     lovable_api_key: str | None = None
     news_api_key: str | None = None
     news_api_url: str | None = None
+    coingecko_api_key: str | None = Field(
+        None,
+        validation_alias=AliasChoices("coingecko_api_key", "COINGECKO_API_KEY", "VITE_COINGECKO_API_KEY"),
+    )
+    lunarcrush_api_key: str | None = Field(
+        None,
+        validation_alias=AliasChoices("lunarcrush_api_key", "LUNARCRUSH_API_KEY", "VITE_LUNARCRUSH_API_KEY"),
+    )
+    alpha_vantage_api_key: str | None = Field(
+        None,
+        validation_alias=AliasChoices("alpha_vantage_api_key", "ALPHA_VANTAGE_API_KEY", "VITE_ALPHA_VANTAGE_API_KEY"),
+    )
+    fred_api_key: str | None = Field(
+        None,
+        validation_alias=AliasChoices("fred_api_key", "FRED_API_KEY"),
+    )
+    etherscan_api_key: str | None = Field(
+        None,
+        validation_alias=AliasChoices("etherscan_api_key", "ETHERSCAN_API_KEY", "VITE_ETHERSCAN_API_KEY"),
+    )
+    dainam_api_url: AnyHttpUrl | None = Field(
+        None,
+        validation_alias=AliasChoices("dainam_api_url", "DAINAM_API_URL"),
+    )
+    dainam_api_key: str | None = Field(
+        None,
+        validation_alias=AliasChoices("dainam_api_key", "DAINAM_API_KEY"),
+    )
+    dns_api_key: str | None = Field(
+        None,
+        validation_alias=AliasChoices("dns_api_key", "DNS_API_KEY"),
+    )
     vn_stock_api_url: str | None = None
     vn_stock_api_key: str | None = None
     vn_stock_source: str | None = None
+    dns_source_label: str = Field(
+        "DaiNam_DNS",
+        validation_alias=AliasChoices("dns_source_label", "DNS_SOURCE_LABEL"),
+    )
     rumour_table: str = Field("Rumor_Hunting_Top20")
     inverse_short_table: str = Field("Inverse_Short_Setup")
     rate_limit_min: float = Field(3.0, validation_alias="BINANCE_RATE_LIMIT_SECONDS_MIN")
     rate_limit_max: float = Field(5.0, validation_alias="BINANCE_RATE_LIMIT_SECONDS_MAX")
+    cache_time_realtime_slow: int = Field(
+        30000,
+        validation_alias=AliasChoices("cache_time_realtime_slow", "CACHE_TIME_REALTIME_SLOW"),
+    )
+    cache_time_social: int = Field(
+        1800000,
+        validation_alias=AliasChoices("cache_time_social", "CACHE_TIME_SOCIAL"),
+    )
+    cache_time_macro: int = Field(
+        86400000,
+        validation_alias=AliasChoices("cache_time_macro", "CACHE_TIME_MACRO"),
+    )
     timezone: str = "Asia/Ho_Chi_Minh"
 
 
