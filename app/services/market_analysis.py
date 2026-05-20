@@ -25,7 +25,8 @@ class MarketAnalysisEngine:
         if not rows:
             return []
 
-        url = f"{settings.supabase_url}/rest/v1/{table}"
+        base_url = str(settings.supabase_url).rstrip("/")
+        url = f"{base_url}/rest/v1/{table}"
         headers = self._supabase_headers()
         async with AsyncClient(timeout=30.0) as client:
             response = await client.post(
