@@ -4,10 +4,10 @@ from dataclasses import dataclass
 from time import perf_counter
 from datetime import datetime, timezone
 from app.services.rumor_hunting import AdvancedRumorHunting
-from .services.anti_trap_short import AntiTrapShortEngine
-from .services.market_analysis import MarketAnalysisEngine
-from .services.macro_scheduler import MacroDataScheduler
-from .db import SupabaseClient
+from app.services.anti_trap_short import AntiTrapShortEngine
+from app.services.market_analysis import MarketAnalysisEngine
+from app.services.macro_scheduler import MacroDataScheduler
+from app.db import SupabaseClient
 
 
 @dataclass
