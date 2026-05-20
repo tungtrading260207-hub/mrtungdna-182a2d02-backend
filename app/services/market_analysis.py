@@ -125,15 +125,15 @@ class MarketAnalysisEngine:
 
         signal_items = [self.build_signal_record(item) for item in scan_items if item["signal"] in {"GOLDEN", "ACCUMULATE"}]
 
-        # Tạo bản ghi sạch loại bỏ các trường AI tạm thời để không bị lỗi 400
-        clean_scans = [{k: v for k, v in item.items() if k != 'ai_note'} for item in scan_items]
-        clean_signals = [{k: v for k, v in item.items() if k != 'ai_note'} for item in signal_items]
+        # Loại bỏ trường 'ai_note' trực tiếp tại đây để tránh lỗi 400 Bad Request trên Supabase
+        scans_to_db = [{k: v for k, v in item.items() if k != 'ai_note'} for item in scan_items]
+        signals_to_db = [{k: v for k, v in item.items() if k != 'ai_note'} for item in signal_items]
 
-        logging.info("[MarketAnalysis] Writing %d market scans", len(clean_scans))
-        await self.supabase_client.upsert_rows("market_scans", clean_scans, conflict="id")
+        logging.info("[MarketAnalysis] Writing %d market scans to Supabase", len(scans_to_db))
+        await self.supabase_client.upsert_rows("market_scans", scans_to_db, conflict="id")
 
-        logging.info("[MarketAnalysis] Writing %d market signals", len(clean_signals))
-        await self.supabase_client.upsert_rows("market_signals", clean_signals, conflict="id")
+        logging.info("[MarketAnalysis] Writing %d market signals to Supabase", len(signals_to_db))
+        await self.supabase_client.upsert_rows("market_signals", signals_to_db, conflict="id")
 
         return scan_items
 
