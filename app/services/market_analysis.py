@@ -2,6 +2,7 @@ import logging
 from datetime import datetime, timezone
 from httpx import AsyncClient
 from .ai_analysis import AIAnalyzer
+from ..config import settings
 from ..db import SupabaseClient
 
 
