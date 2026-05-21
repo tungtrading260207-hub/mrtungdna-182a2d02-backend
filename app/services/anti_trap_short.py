@@ -114,6 +114,13 @@ class AntiTrapShortEngine:
             hma_slope=hma_slope, cvd_trend=cvd_trend, mfi=mfi_values[-1]
         )
 
+        formatted_notes = f"[{status}] {recommendation}"
+        formatted_details = (
+            f"Giá dưới Anchored VWAP {round(vwap, 6)}, HMA slope <=0, MFI {round(mfi_values[-1], 1)} đang xuống, "
+            f"CVD divergence phát hiện. | PnL: Size={pnl_info['position_size']}, "
+            f"SL={pnl_info['pnl_at_sl']}, TP={pnl_info['pnl_at_tp']}, RR={pnl_info['risk_reward_ratio']}"
+        )
+
         return {
             "ticker": symbol,
             "timeframe": "H4/D1",
@@ -122,16 +129,11 @@ class AntiTrapShortEngine:
             "take_profit": round(take_profit, 6),
             "analysis_score": round(score, 1),
             "detected_at": (datetime.now(timezone.utc) + timedelta(hours=7)).isoformat(),
-            "trigger_details": (
-                f"Giá dưới Anchored VWAP {round(vwap, 6)}, HMA slope <=0, MFI {round(mfi_values[-1], 1)} đang xuống, "
-                f"CVD divergence phát hiện."
-            ),
+            "trigger_details": formatted_details,
             "source": "AntiTrapShort",
-            "notes": recommendation,
-            "status": status,
+            "notes": formatted_notes,
             "fvg_top": round(fvg_top, 6),
             "fvg_bottom": round(fvg_bottom, 6),
-            **pnl_info
         }
 
     async def fetch_klines(self, symbol: str, interval: str, limit: int) -> list[dict]:
