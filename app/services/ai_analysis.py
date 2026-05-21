@@ -44,9 +44,9 @@ class AIAnalyzer:
         return base
 
     async def _call_gemini(self, prompt: str) -> str:
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={self.gemini_key}"
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={self.gemini_key}"
         async with AsyncClient(timeout=30.0) as client:
-            response = await client.post(url, json={"contents": [{"parts": [{"text": prompt}]}]})
+            response = await client.post(url, json={"contents": [{"role": "user", "parts": [{"text": prompt}]}]})
             response.raise_for_status()
             data = response.json()
             candidate = data.get("candidates", [{}])[0]
