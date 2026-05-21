@@ -129,43 +129,52 @@ class MarketAnalysisEngine:
         # --- BẮT ĐẦU ĐOẠN CODE CHỐT CHẶN BẢO MẬT & BÓC TÁCH LỖI ---
         import math
 
-        def sanitize_val(v):
-            """Làm sạch tuyệt đối rác dữ liệu từ Binance (NaN, Infinity, None)"""
-            if v is None: return "0"
+        def sanitize_num(v):
+            if v is None: return 0.0
             if isinstance(v, (float, int)):
-                if math.isnan(v) or math.isinf(v): return "0"
+                if math.isnan(v) or math.isinf(v): return 0.0
+                return float(v)
+            try:
+                val = float(v)
+                if math.isnan(val) or math.isinf(val): return 0.0
+                return val
+            except (ValueError, TypeError):
+                return 0.0
+
+        def sanitize_str(v, default=""):
+            if v is None: return default
             return str(v).strip()
 
         # 1. Build Payload Scans an toàn tuyệt đối
         scans_to_db = []
         for item in scan_items:
-            symbol_str = sanitize_val(item.get('symbol', 'UNKNOWN'))
-            rec_id = sanitize_val(item.get('id'))
+            symbol_str = sanitize_str(item.get('symbol', 'UNKNOWN'))
+            rec_id = sanitize_str(item.get('id'))
             if rec_id == "0" or rec_id == "": rec_id = symbol_str
 
             scans_to_db.append({
                 "id": rec_id,
                 "symbol": symbol_str,
-                "score": sanitize_val(item.get('score')),
-                "price": sanitize_val(item.get('price')),
-                "volume": sanitize_val(item.get('volume')),
-                "signal": sanitize_val(item.get('signal'))
+                "score": sanitize_num(item.get('score')),
+                "price": sanitize_num(item.get('price')),
+                "volume": sanitize_num(item.get('volume')),
+                "signal": sanitize_str(item.get('signal', 'NONE'))
             })
 
         # 2. Build Payload Signals an toàn tuyệt đối
         signals_to_db = []
         for item in signal_items:
-            symbol_str = sanitize_val(item.get('symbol', 'UNKNOWN'))
-            sig_str = sanitize_val(item.get('signal', 'NONE'))
-            rec_id = sanitize_val(item.get('id'))
+            symbol_str = sanitize_str(item.get('symbol', 'UNKNOWN'))
+            sig_str = sanitize_str(item.get('signal', 'NONE'))
+            rec_id = sanitize_str(item.get('id'))
             if rec_id == "0" or rec_id == "": rec_id = f"{symbol_str}_{sig_str}"
 
             signals_to_db.append({
                 "id": rec_id,
                 "symbol": symbol_str,
                 "signal": sig_str,
-                "score": sanitize_val(item.get('score')),
-                "price": sanitize_val(item.get('price'))
+                "score": sanitize_num(item.get('score')),
+                "price": sanitize_num(item.get('price'))
             })
 
         # 3. Ghi DB với Try-Catch soi chiếu mọi góc ngách

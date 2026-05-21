@@ -25,8 +25,24 @@ class SupabaseClient:
 
     async def init_pool(self):
         if self.postgres_url:
+            import json
             logging.info("Initializing PostgreSQL connection pool.")
-            self._pool = await asyncpg.create_pool(self.postgres_url, max_size=6)
+            
+            async def init_conn(conn):
+                await conn.set_type_codec(
+                    'json',
+                    encoder=json.dumps,
+                    decoder=json.loads,
+                    schema='pg_catalog'
+                )
+                await conn.set_type_codec(
+                    'jsonb',
+                    encoder=json.dumps,
+                    decoder=json.loads,
+                    schema='pg_catalog'
+                )
+
+            self._pool = await asyncpg.create_pool(self.postgres_url, max_size=6, init=init_conn)
 
     async def insert_rows(self, table: str, rows: list[dict]):
         if not rows:
