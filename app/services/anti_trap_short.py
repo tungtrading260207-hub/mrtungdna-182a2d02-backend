@@ -7,13 +7,14 @@ from ..config import settings
 from ..db import SupabaseClient
 from ..rate_limiter import anti_429_delay
 from .no_api_scrapers import NoApiScraper
-from .no_api_scrapers import NoApiScraper
+from .antigravity_engine import AntigravityEngine
 
 
 class AntiTrapShortEngine:
     def __init__(self, supabase_client: SupabaseClient):
         self.supabase_client = supabase_client
         self.scraper = NoApiScraper()
+        self.ag_engine = AntigravityEngine()
 
     async def scan(self) -> list[dict]:
         symbols = await self.fetch_symbols()
@@ -96,6 +97,23 @@ class AntiTrapShortEngine:
         entry, stop_loss, take_profit = self.calculate_targets(last_close, fvg_top, fvg_bottom)
         score = self.compute_setup_score(last_close, vwap, hma_values[-1], mfi_values[-1], cvd_signals)
 
+        # -----------------------------
+        # Áp dụng AntigravityEngine
+        # -----------------------------
+        asset_class = self.ag_engine.classify_asset(symbol)
+        side = "SHORT"
+        pnl_info = self.ag_engine.calculate_pnl_expected(
+            asset_class=asset_class, side=side, entry=entry, sl=stop_loss, tp=take_profit, capital=1000, leverage=10
+        )
+        
+        hma_slope = hma_values[-1] - hma_values[-2] if len(hma_values) >= 2 else 0
+        cvd_trend = "DIVERGENCE" if cvd_signals else "DOWNTREND"
+        
+        status, recommendation = self.ag_engine.generate_realtime_recommendation(
+            asset_class=asset_class, side=side, current_price=last_close, entry=entry, 
+            hma_slope=hma_slope, cvd_trend=cvd_trend, mfi=mfi_values[-1]
+        )
+
         return {
             "ticker": symbol,
             "timeframe": "H4/D1",
@@ -109,9 +127,11 @@ class AntiTrapShortEngine:
                 f"CVD divergence phát hiện."
             ),
             "source": "AntiTrapShort",
-            "notes": "Thiết lập tự động Anti-Trap Short theo khung H4/D1.",
+            "notes": recommendation,
+            "status": status,
             "fvg_top": round(fvg_top, 6),
             "fvg_bottom": round(fvg_bottom, 6),
+            **pnl_info
         }
 
     async def fetch_klines(self, symbol: str, interval: str, limit: int) -> list[dict]:
