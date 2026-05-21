@@ -6,17 +6,41 @@ from httpx import AsyncClient
 from ..config import settings
 from ..db import SupabaseClient
 from ..rate_limiter import anti_429_delay
+from .no_api_scrapers import NoApiScraper
+from .no_api_scrapers import NoApiScraper
 
 
 class AntiTrapShortEngine:
     def __init__(self, supabase_client: SupabaseClient):
         self.supabase_client = supabase_client
+        self.scraper = NoApiScraper()
 
     async def scan(self) -> list[dict]:
         symbols = await self.fetch_symbols()
         signals: list[dict] = []
+        
+        if not symbols:
+            return signals
 
-        for symbol in symbols:
+        # 1. TradingView Pre-filter (No-API) to avoid Binance Rate Limit
+        tv_tickers = [f"BINANCE:{s}" for s in symbols]
+        tv_data = await self.scraper.scan_tradingview(["crypto"], tv_tickers)
+        
+        filtered_symbols = []
+        if tv_data and "data" in tv_data:
+            for item in tv_data["data"]:
+                sym = item.get("s", "").replace("BINANCE:", "")
+                d = item.get("d", [])
+                if len(d) >= 5:
+                    mfi = d[4] # MoneyFlow is index 4 based on columns list
+                    # Lọc thô MFI > 80
+                    if mfi is not None and mfi > 80:
+                        filtered_symbols.append(sym)
+        else:
+            # Fallback if TradingView fails
+            filtered_symbols = symbols
+
+        for symbol in filtered_symbols:
             try:
                 signal = await self.evaluate_symbol(symbol)
                 if signal:

@@ -5,12 +5,15 @@ from zoneinfo import ZoneInfo
 from httpx import AsyncClient
 from ..config import settings
 from ..db import SupabaseClient
+from .no_api_scrapers import NoApiScraper
+from .no_api_scrapers import NoApiScraper
 
 
 class MacroDataScheduler:
     def __init__(self, supabase_client: SupabaseClient):
         self.supabase_client = supabase_client
         self.last_fred_date: str | None = None
+        self.scraper = NoApiScraper()
         try:
             self.local_zone = ZoneInfo(settings.timezone)
         except Exception:
@@ -31,6 +34,10 @@ class MacroDataScheduler:
         alpha_vantage = await self.fetch_alpha_vantage_data()
         if alpha_vantage:
             records.append(alpha_vantage)
+
+        tv_macro = await self.fetch_tradingview_macro_data()
+        if tv_macro:
+            records.extend(tv_macro)
 
         fred = await self.fetch_fred_data_if_due()
         if fred:
@@ -132,6 +139,44 @@ class MacroDataScheduler:
         }
         self._set_cache(cache_key, record, settings.cache_time_macro)
         return record
+
+    async def fetch_tradingview_macro_data(self) -> list[dict]:
+        cache_key = "tv_macro_data"
+        cached = self._get_cached(cache_key)
+        if cached:
+            return cached
+
+        # Fetch Gold, DXY, SPY via TradingView Scanner
+        payload = await self.scraper.scan_tradingview(
+            markets=["america", "cfd"],
+            tickers=["FX_IDC:XAUUSD", "CAPITALCOM:DXY", "AMEX:SPY"]
+        )
+        
+        records = []
+        if payload and "data" in payload:
+            for item in payload["data"]:
+                sym = item.get("s", "")
+                d = item.get("d", [])
+                if len(d) >= 3:
+                    records.append({
+                        "id": f"tv_macro_{sym}",
+                        "source": "TradingView",
+                        "metric": f"macro_{sym}",
+                        "value": {
+                            "symbol": sym,
+                            "price": d[0], # close
+                            "volume": d[1], # volume
+                            "change_percent": d[2], # change
+                        },
+                        "updated_at": datetime.now(timezone.utc).isoformat(),
+                        "notes": "No-API TradingView macro scan."
+                    })
+        
+        if records:
+            # We cache it as a list in the cache dict. The _set_cache expects a record dict but we can store list too.
+            self._set_cache(cache_key, records, settings.cache_time_realtime_slow) # Update quickly like every 5m
+            return records
+        return []
 
     async def fetch_fred_data_if_due(self) -> dict | None:
         if not settings.fred_api_key:

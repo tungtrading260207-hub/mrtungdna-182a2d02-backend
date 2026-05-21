@@ -5,6 +5,7 @@ from fastapi import FastAPI, HTTPException
 from app.config import settings
 from app.db import SupabaseClient
 from app.tasks import RumorHuntingWorker, AntiTrapShortWorker, MarketDataAnalysisWorker, MacroDataSchedulerWorker
+from app.services.no_api_scrapers import NoApiScraper
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
@@ -20,6 +21,7 @@ rumor_worker: RumorHuntingWorker | None = None
 anti_short_worker: AntiTrapShortWorker | None = None
 analysis_worker: MarketDataAnalysisWorker | None = None
 macro_worker: MacroDataSchedulerWorker | None = None
+no_api_scraper = NoApiScraper()
 
 
 # ==================== ĐOẠN THÊM MỚI VÀO ĐÂY ====================
@@ -46,6 +48,7 @@ async def startup_event():
     worker_tasks.append(asyncio.create_task(anti_short_worker.start_loop()))
     worker_tasks.append(asyncio.create_task(analysis_worker.start_loop()))
     worker_tasks.append(asyncio.create_task(macro_worker.start_loop()))
+    worker_tasks.append(asyncio.create_task(no_api_scraper.start_binance_ws_pool()))
     logging.info("Background workers launched.")
 
 @app.on_event("shutdown")
