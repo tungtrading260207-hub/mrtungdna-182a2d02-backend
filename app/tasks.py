@@ -1,4 +1,4 @@
-﻿import asyncio
+import asyncio
 import logging
 from dataclasses import dataclass
 from time import perf_counter
@@ -22,7 +22,7 @@ class WorkerStatus:
 
 
 class WorkerBase:
-    def __init__(self, supabase_client: SupabaseClient, interval_seconds: int = 900):
+    def __init__(self, supabase_client: SupabaseClient, interval_seconds: int = 60):
         self.supabase_client = supabase_client
         self.interval_seconds = interval_seconds
         self.engine = None
@@ -57,24 +57,24 @@ class WorkerBase:
 
 
 class RumorHuntingWorker(WorkerBase):
-    def __init__(self, supabase_client: SupabaseClient, interval_seconds: int = 900):
+    def __init__(self, supabase_client: SupabaseClient, interval_seconds: int = 60):
         super().__init__(supabase_client, interval_seconds)
         self.engine = AdvancedRumorHunting(self.supabase_client)
 
 
 class AntiTrapShortWorker(WorkerBase):
-    def __init__(self, supabase_client: SupabaseClient, interval_seconds: int = 1800):
+    def __init__(self, supabase_client: SupabaseClient, interval_seconds: int = 60):
         super().__init__(supabase_client, interval_seconds)
         self.engine = AntiTrapShortEngine(self.supabase_client)
 
 
 class MarketDataAnalysisWorker(WorkerBase):
-    def __init__(self, supabase_client: SupabaseClient, interval_seconds: int = 1800):
+    def __init__(self, supabase_client: SupabaseClient, interval_seconds: int = 60):
         super().__init__(supabase_client, interval_seconds)
         self.engine = MarketAnalysisEngine(self.supabase_client)
 
 
 class MacroDataSchedulerWorker(WorkerBase):
-    def __init__(self, supabase_client: SupabaseClient, interval_seconds: int = 3600):
+    def __init__(self, supabase_client: SupabaseClient, interval_seconds: int = 60):
         super().__init__(supabase_client, interval_seconds)
         self.engine = MacroDataScheduler(self.supabase_client)

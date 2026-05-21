@@ -74,7 +74,7 @@ class Settings(BaseSettings):
     rate_limit_min: float = Field(3.0, validation_alias="BINANCE_RATE_LIMIT_SECONDS_MIN")
     rate_limit_max: float = Field(5.0, validation_alias="BINANCE_RATE_LIMIT_SECONDS_MAX")
     cache_time_realtime_slow: int = Field(
-        30000,
+        300000,
         validation_alias=AliasChoices("cache_time_realtime_slow", "CACHE_TIME_REALTIME_SLOW"),
     )
     cache_time_social: int = Field(

@@ -17,6 +17,7 @@ class AdvancedRumorHunting:
         self.dedup_cache: set[str] = set()
         self.max_cache_size = 500
         self.vn_source = VNStockSource()
+        self._coinglass_cache: dict[str, tuple[dict, datetime]] = {}
 
     async def scan(self) -> list[dict]:
         tickers = await self.fetch_binance_snapshot()
@@ -59,6 +60,14 @@ class AdvancedRumorHunting:
         if not settings.coinglass_api_key:
             return None
 
+        now = datetime.now(timezone.utc)
+        if symbol in self._coinglass_cache:
+            cached_data, expiry = self._coinglass_cache[symbol]
+            if now < expiry:
+                return cached_data
+            else:
+                del self._coinglass_cache[symbol]
+
         async with AsyncClient(timeout=20.0) as client:
             await anti_429_delay()
             response = await client.get(
@@ -72,7 +81,9 @@ class AdvancedRumorHunting:
                 return None
 
             payload = response.json()
-            return payload.get("data") or payload
+            data = payload.get("data") or payload
+            self._coinglass_cache[symbol] = (data, now + timedelta(minutes=5))
+            return data
 
     async def fetch_vn_stock_data(self, symbol: str) -> dict | None:
         if not self.vn_source.base_url:
