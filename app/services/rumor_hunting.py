@@ -9,6 +9,8 @@ from ..config import settings
 from ..db import SupabaseClient
 from ..rate_limiter import anti_429_delay
 from .vn_stock_source import VNStockSource
+from core.validator import DataValidator
+from core.schemas.crypto_schema import RumorHuntingRecord
 
 
 class AdvancedRumorHunting:
@@ -44,8 +46,17 @@ class AdvancedRumorHunting:
         records = records[:20]
 
         if records:
-            logging.info("[RumorHunting] Pushing %d records to Supabase.", len(records))
-            await self.supabase_client.insert_rows(settings.rumour_table, records)
+            validated_records, validation_errors = DataValidator.validate_many(RumorHuntingRecord, records)
+            if validation_errors:
+                logging.warning("[RumorHunting] Dropped %d invalid rumor hunting records.", len(validation_errors))
+                for err in validation_errors:
+                    logging.debug("[RumorHunting] Validation error %s: %s", err["index"], err["errors"])
+
+            if validated_records:
+                logging.info("[RumorHunting] Pushing %d records to Supabase.", len(validated_records))
+                await self.supabase_client.insert_rows(settings.rumour_table, validated_records)
+            else:
+                logging.warning("[RumorHunting] No valid rumor hunting records to push.")
 
         return records
 

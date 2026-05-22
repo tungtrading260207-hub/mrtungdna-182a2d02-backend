@@ -94,6 +94,18 @@ class Settings(BaseSettings):
         86400000,
         validation_alias=AliasChoices("cache_time_macro", "CACHE_TIME_MACRO"),
     )
+    dashboard_alert_url: AnyHttpUrl | None = Field(
+        None,
+        validation_alias=AliasChoices("dashboard_alert_url", "DASHBOARD_ALERT_URL"),
+    )
+    dashboard_alert_api_key: str | None = Field(
+        None,
+        validation_alias=AliasChoices("dashboard_alert_api_key", "DASHBOARD_ALERT_API_KEY"),
+    )
+    schema_sync_interval_seconds: int = Field(
+        3600,
+        validation_alias=AliasChoices("schema_sync_interval_seconds", "SCHEMA_SYNC_INTERVAL_SECONDS"),
+    )
     timezone: str = "Asia/Ho_Chi_Minh"
 
 

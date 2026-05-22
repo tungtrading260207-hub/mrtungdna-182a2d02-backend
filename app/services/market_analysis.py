@@ -4,6 +4,8 @@ from httpx import AsyncClient
 from .ai_analysis import AIAnalyzer
 from ..config import settings
 from ..db import SupabaseClient
+from core.validator import DataValidator
+from core.schemas.stock_schema import MarketScan, MarketSignal
 
 
 class MarketAnalysisEngine:
@@ -161,6 +163,12 @@ class MarketAnalysisEngine:
                 "signal": sanitize_str(item.get('signal', 'NONE'))
             })
 
+        scans_to_db, scan_validation_errors = DataValidator.validate_many(MarketScan, scans_to_db)
+        if scan_validation_errors:
+            logging.warning("[MarketAnalysis] %d invalid market scan records were dropped.", len(scan_validation_errors))
+            for err in scan_validation_errors:
+                logging.debug("[MarketAnalysis] Scan validation error %s: %s", err["index"], err["errors"])
+
         # 2. Build Payload Signals an toàn tuyệt đối
         signals_to_db = []
         for item in signal_items:
@@ -176,6 +184,12 @@ class MarketAnalysisEngine:
                 "score": sanitize_num(item.get('score')),
                 "price": sanitize_num(item.get('price'))
             })
+
+        signals_to_db, signal_validation_errors = DataValidator.validate_many(MarketSignal, signals_to_db)
+        if signal_validation_errors:
+            logging.warning("[MarketAnalysis] %d invalid market signal records were dropped.", len(signal_validation_errors))
+            for err in signal_validation_errors:
+                logging.debug("[MarketAnalysis] Signal validation error %s: %s", err["index"], err["errors"])
 
         # 3. Ghi DB với Try-Catch soi chiếu mọi góc ngách
         try:
@@ -268,7 +282,7 @@ class MarketAnalysisEngine:
             "market": scan["market"],
             "entry_price": entry_price,
             "score": scan["score"],
-            "signal_type": scan["signal"],
+            "signal": scan["signal"],
             "note": scan["note"],
             "created_at": scan["updated_at"],
         }

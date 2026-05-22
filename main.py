@@ -6,6 +6,7 @@ from app.config import settings
 from app.db import SupabaseClient
 from app.tasks import RumorHuntingWorker, AntiTrapShortWorker, MarketDataAnalysisWorker, MacroDataSchedulerWorker
 from app.services.no_api_scrapers import NoApiScraper
+from core.schema_sync import SchemaSyncChecker
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
@@ -21,6 +22,7 @@ rumor_worker: RumorHuntingWorker | None = None
 anti_short_worker: AntiTrapShortWorker | None = None
 analysis_worker: MarketDataAnalysisWorker | None = None
 macro_worker: MacroDataSchedulerWorker | None = None
+schema_sync_worker: SchemaSyncChecker | None = None
 no_api_scraper = NoApiScraper()
 
 
@@ -37,7 +39,7 @@ async def read_root():
 
 @app.on_event("startup")
 async def startup_event():
-    global rumor_worker, anti_short_worker, analysis_worker, macro_worker
+    global rumor_worker, anti_short_worker, analysis_worker, macro_worker, schema_sync_worker
     logging.info("Starting Mr Tung Python FastAPI worker...")
     await supabase_client.init_pool()
     rumor_worker = RumorHuntingWorker(supabase_client)
@@ -48,6 +50,16 @@ async def startup_event():
     worker_tasks.append(asyncio.create_task(anti_short_worker.start_loop()))
     worker_tasks.append(asyncio.create_task(analysis_worker.start_loop()))
     worker_tasks.append(asyncio.create_task(macro_worker.start_loop()))
+    if supabase_client._pool:
+        schema_sync_worker = SchemaSyncChecker(
+            supabase_client=supabase_client,
+            dashboard_url=settings.dashboard_alert_url,
+            dashboard_api_key=settings.dashboard_alert_api_key,
+            interval_seconds=settings.schema_sync_interval_seconds,
+        )
+        worker_tasks.append(asyncio.create_task(schema_sync_worker.start_loop()))
+    else:
+        logging.warning("[main] Schema sync worker disabled because SUPABASE_DB_URL is not configured.")
     worker_tasks.append(asyncio.create_task(no_api_scraper.start_binance_ws_pool()))
     logging.info("Background workers launched.")
 
@@ -100,6 +112,7 @@ async def tasks_status():
         "anti_trap_short": anti_short_worker.status.__dict__ if anti_short_worker else None,
         "market_analysis": analysis_worker.status.__dict__ if analysis_worker else None,
         "macro_scheduler": macro_worker.status.__dict__ if macro_worker else None,
+        "schema_sync": schema_sync_worker.status.__dict__ if schema_sync_worker else None,
     }
 
 
@@ -112,6 +125,17 @@ async def trigger_market_analysis():
         "status": "ok",
         "records_written": len(records),
         "worker_status": analysis_worker.status.__dict__,
+    }
+
+
+@app.post("/trigger/schema-sync")
+async def trigger_schema_sync():
+    if schema_sync_worker is None:
+        raise HTTPException(status_code=503, detail="Schema sync worker not initialized")
+    result = await schema_sync_worker.run_once()
+    return {
+        "status": "ok",
+        "result": result,
     }
 
 

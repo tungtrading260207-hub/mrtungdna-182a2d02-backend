@@ -5,6 +5,8 @@ from datetime import datetime, timezone, timedelta
 from httpx import AsyncClient
 from ..config import settings
 from ..db import SupabaseClient
+from core.validator import DataValidator
+from core.schemas.crypto_schema import InverseShortSetup
 from ..rate_limiter import anti_429_delay
 from .no_api_scrapers import NoApiScraper
 from .antigravity_engine import AntigravityEngine
@@ -50,8 +52,17 @@ class AntiTrapShortEngine:
                 logging.warning("[AntiTrapShort] Error scanning %s: %s", symbol, exc)
 
         if signals:
-            logging.info("[AntiTrapShort] Writing %d signals to Supabase.", len(signals))
-            await self.supabase_client.insert_rows(settings.inverse_short_table, signals)
+            validated_signals, validation_errors = DataValidator.validate_many(InverseShortSetup, signals)
+            if validation_errors:
+                logging.warning("[AntiTrapShort] Dropped %d invalid inverse short records.", len(validation_errors))
+                for err in validation_errors:
+                    logging.debug("[AntiTrapShort] Validation error %s: %s", err["index"], err["errors"])
+
+            if validated_signals:
+                logging.info("[AntiTrapShort] Writing %d signals to Supabase.", len(validated_signals))
+                await self.supabase_client.insert_rows(settings.inverse_short_table, validated_signals)
+            else:
+                logging.warning("[AntiTrapShort] No valid inverse short records to write.")
 
         return signals
 

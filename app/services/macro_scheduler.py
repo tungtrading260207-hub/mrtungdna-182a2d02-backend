@@ -5,7 +5,8 @@ from zoneinfo import ZoneInfo
 from httpx import AsyncClient
 from ..config import settings
 from ..db import SupabaseClient
-from .no_api_scrapers import NoApiScraper
+from core.validator import DataValidator
+from core.schemas.macro_schema import MacroIndicator
 from .no_api_scrapers import NoApiScraper
 
 
@@ -44,8 +45,17 @@ class MacroDataScheduler:
             records.append(fred)
 
         if records:
-            logging.info("[MacroDataScheduler] Writing %d records to Supabase.", len(records))
-            await self.supabase_client.upsert_rows("macro_sentiment", records, conflict="id")
+            validated_records, validation_errors = DataValidator.validate_many(MacroIndicator, records)
+            if validation_errors:
+                logging.warning("[MacroDataScheduler] Dropped %d invalid macro indicator records.", len(validation_errors))
+                for err in validation_errors:
+                    logging.debug("[MacroDataScheduler] Validation error %s: %s", err["index"], err["errors"])
+
+            if validated_records:
+                logging.info("[MacroDataScheduler] Writing %d records to Supabase.", len(validated_records))
+                await self.supabase_client.upsert_rows("macro_indicators", validated_records, conflict="id")
+            else:
+                logging.warning("[MacroDataScheduler] No valid macro indicator records to write.")
 
         return records
 

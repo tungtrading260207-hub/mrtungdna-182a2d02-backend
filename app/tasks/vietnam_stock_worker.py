@@ -5,13 +5,18 @@ from zoneinfo import ZoneInfo
 from httpx import AsyncClient
 from ..config import settings
 from ..db import SupabaseClient
-from . import WorkerBase
+from core.worker import BaseWorker
+from core.schemas.stock_schema import VNStockProfile
 
 
-class VietnamStockWorker(WorkerBase):
+class VietnamStockWorker(BaseWorker):
     def __init__(self, supabase_client: SupabaseClient, interval_seconds: int = 15):
-        super().__init__(supabase_client, interval_seconds)
-        self.engine = self
+        super().__init__(supabase_client, schema=VNStockProfile, table_name=VNStockProfile.table_name, conflict="id")
+        self.interval_seconds = interval_seconds
+        try:
+            self.local_zone = ZoneInfo(settings.timezone)
+        except Exception:
+            self.local_zone = timezone.utc
         try:
             self.local_zone = ZoneInfo(settings.timezone)
         except Exception:
@@ -21,7 +26,10 @@ class VietnamStockWorker(WorkerBase):
         while True:
             now = datetime.now(self.local_zone)
             if self._is_trading_hours(now):
-                await self._run_cycle()
+                try:
+                    await self.run_once()
+                except Exception as exc:
+                    logging.exception("[VietnamStockWorker] Fetch/load cycle failed: %s", exc)
                 await asyncio.sleep(self.interval_seconds)
             else:
                 await asyncio.sleep(300)
@@ -31,13 +39,7 @@ class VietnamStockWorker(WorkerBase):
             logging.warning("[VietnamStockWorker] DAINAM_API_URL or DAINAM_API_KEY is not configured.")
             return []
 
-        raw_data = await self.fetch_vietnam_stock_data()
-        records = self.normalize_records(raw_data)
-        if not records:
-            return []
-
-        await self.supabase_client.upsert_rows("vn_stock_profiles", records, conflict="id")
-        return records
+        return await self.run_once()
 
     async def fetch_vietnam_stock_data(self) -> dict | list[dict] | None:
         api_url = str(settings.dainam_api_url).strip().rstrip("/")
