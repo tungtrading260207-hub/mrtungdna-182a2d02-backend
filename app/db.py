@@ -69,7 +69,7 @@ class SupabaseClient:
 
     async def _insert_rest(self, table: str, rows: list[dict]):
         table_name = table.strip().lower()
-        response = await self._rest_client.post(f"/{table_name}", json=rows, params={"return": "minimal"})
+        response = await self._rest_client.post(f"/{table_name}", json=rows)
         response.raise_for_status()
         return []
 
@@ -135,7 +135,7 @@ class SupabaseClient:
         response = await self._rest_client.post(
             f"/{table_name}",
             json=rows,
-            params={"on_conflict": conflict, "return": "minimal"},
+            params={"on_conflict": conflict},
         )
         response.raise_for_status()
         return []

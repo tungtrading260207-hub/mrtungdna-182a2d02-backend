@@ -280,6 +280,7 @@ class MarketAnalysisEngine:
             "id": scan["ticker"],
             "ticker": scan["ticker"],
             "market": scan["market"],
+            "price": round(scan["price"], 8),
             "entry_price": entry_price,
             "score": scan["score"],
             "signal": scan["signal"],
