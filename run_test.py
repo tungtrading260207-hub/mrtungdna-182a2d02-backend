@@ -11,16 +11,20 @@ from app.tasks.vietnam_stock_worker import VietnamStockWorker
 
 async def main():
     print("[Test] Đang kết nối Supabase Cloud...")
-    supabase = SupabaseClient(settings.supabase_url, settings.supabase_service_key)
+    supabase = SupabaseClient()
     
     print("[Test] Khởi tạo VietnamStockWorker...")
     worker = VietnamStockWorker(supabase_client=supabase)
     
-    print("[Test] Ép worker chạy một chu kỳ quét dữ liệu thực tế...")
-    # Gọi chính xác hàm chạy chu kỳ của Worker để kích hoạt luồng cào Đại Nam và đẩy Supabase
-    await worker._run_cycle()
+    print("[Test] Thực hiện vá ép kiểu dữ liệu URL từ AnyHttpUrl sang String thuần...")
+    # Biến đổi object AnyHttpUrl thành chuỗi string thuần để httpx không bị lỗi ép kiểu
+    if settings.dainam_api_url:
+        settings.dainam_api_url = str(settings.dainam_api_url)
     
-    print("[Test] Chu kỳ chạy thử hoàn tất! Anh quay lại kiểm tra bảng trên Supabase nhé.")
+    print("[Test] Ép worker bơi ra API lấy dữ liệu và đẩy lên Supabase...")
+    records = await worker.scan()
+    
+    print(f"[Test] Chu kỳ hoàn tất! Đã xử lý và đẩy thành công dữ liệu lên bảng vn_stock_profiles.")
 
 if __name__ == "__main__":
     asyncio.run(main())
