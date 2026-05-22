@@ -16,6 +16,7 @@ class MacroIndicator(BaseModel):
 
     model_config = {
         "extra": "ignore",
+        "ignored_types": (ClassVar,),
     }
 
 
@@ -30,6 +31,7 @@ class SystemHealth(BaseModel):
 
     model_config = {
         "extra": "ignore",
+        "ignored_types": (ClassVar,),
     }
 
 
@@ -46,4 +48,5 @@ class MarketNews(BaseModel):
 
     model_config = {
         "extra": "ignore",
+        "ignored_types": (ClassVar,),
     }

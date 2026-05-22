@@ -1,12 +1,25 @@
 import asyncio
 import logging
 from datetime import datetime, timezone
+from typing import ClassVar
 from httpx import AsyncClient
+from pydantic import BaseModel, Field
 from ..config import settings
 from ..db import SupabaseClient
 from core.validator import DataValidator
 from core.schemas.stock_schema import VNStockProfile
 from .vn_stock_source import VNStockSource
+
+
+class VNStockProfilePayload(BaseModel):
+    """Payload container for VN stock profile"""
+    symbol: str
+    net_flow: float | int = Field(default=0)
+    flow_data: dict = Field(default_factory=dict)
+    snapshot_date: str
+    analyzed_at: str
+    
+    model_config = {"extra": "ignore"}
 
 
 class VNStockAnalyzer:
@@ -82,22 +95,23 @@ class VNStockAnalyzer:
     
     def build_profile_record(self, symbol: str, flow_data: dict, snapshot: dict) -> dict:
         """Build profile record cho một mã cổ phiếu"""
-        timestamp = datetime.now(timezone.utc).isoformat()
+        timestamp = datetime.now(timezone.utc)
+        timestamp_iso = timestamp.isoformat()
         
         # Lấy dữ liệu flow
         net_flow = flow_data.get("netFlow") or flow_data.get("flow") or 0
         source_name = flow_data.get("source") or settings.vn_stock_source or "DNS"
         
         return {
-            "id": f"vn_{symbol}_{timestamp[:10]}",  # Unique per day
+            "id": f"vn_{symbol}_{timestamp_iso[:10]}",  # Unique per day
             "symbol": symbol,
             "source": source_name,
             "payload": {
                 "symbol": symbol,
-                "net_flow": net_flow,
+                "net_flow": float(net_flow) if net_flow else 0.0,
                 "flow_data": flow_data,
-                "snapshot_date": timestamp[:10],
-                "analyzed_at": timestamp,
+                "snapshot_date": timestamp_iso[:10],
+                "analyzed_at": timestamp_iso,
             },
-            "updated_at": timestamp,
+            "updated_at": timestamp,  # datetime object, not string
         }

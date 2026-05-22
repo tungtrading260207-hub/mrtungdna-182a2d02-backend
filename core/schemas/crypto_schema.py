@@ -20,6 +20,7 @@ class RumorHuntingRecord(BaseModel):
 
     model_config = {
         "extra": "ignore",
+        "ignored_types": (ClassVar,),
     }
 
 
@@ -42,4 +43,5 @@ class InverseShortSetup(BaseModel):
 
     model_config = {
         "extra": "ignore",
+        "ignored_types": (ClassVar,),
     }

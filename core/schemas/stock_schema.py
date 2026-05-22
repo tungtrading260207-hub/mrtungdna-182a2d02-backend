@@ -14,6 +14,7 @@ class VNStockProfile(BaseModel):
 
     model_config = {
         "extra": "ignore",
+        "ignored_types": (ClassVar,),
     }
 
 
@@ -30,6 +31,7 @@ class MarketScan(BaseModel):
 
     model_config = {
         "extra": "ignore",
+        "ignored_types": (ClassVar,),
     }
 
 
@@ -45,4 +47,5 @@ class MarketSignal(BaseModel):
 
     model_config = {
         "extra": "ignore",
+        "ignored_types": (ClassVar,),
     }
