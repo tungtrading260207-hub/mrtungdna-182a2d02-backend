@@ -59,6 +59,14 @@ class Settings(BaseSettings):
         None,
         validation_alias=AliasChoices("dainam_api_key", "DAINAM_API_KEY"),
     )
+    dainam_api_secret: str | None = Field(
+        None,
+        validation_alias=AliasChoices("dainam_api_secret", "DAINAM_API_SECRET"),
+    )
+    dainam_api_path: str | None = Field(
+        None,
+        validation_alias=AliasChoices("dainam_api_path", "DAINAM_API_PATH"),
+    )
     dns_api_key: str | None = Field(
         None,
         validation_alias=AliasChoices("dns_api_key", "DNS_API_KEY"),

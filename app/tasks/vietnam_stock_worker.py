@@ -40,13 +40,28 @@ class VietnamStockWorker(WorkerBase):
         return records
 
     async def fetch_vietnam_stock_data(self) -> dict | list[dict] | None:
+        api_url = str(settings.dainam_api_url).strip()
+        if api_url.endswith("/"):
+            api_url = api_url[:-1]
+
+        if settings.dainam_api_path:
+            endpoint = f"{api_url}/{str(settings.dainam_api_path).strip().lstrip('/')}"
+        elif api_url.lower().endswith("/v1"):
+            endpoint = f"{api_url}/market/symbols"
+        elif api_url.lower().endswith("/lightspeed/v1"):
+            endpoint = f"{api_url}/market/symbols"
+        else:
+            endpoint = api_url
+
         headers = {
             "Authorization": f"Bearer {settings.dainam_api_key}",
             "Content-Type": "application/json",
         }
+        if settings.dainam_api_secret:
+            headers["X-API-SECRET"] = settings.dainam_api_secret
 
         async with AsyncClient(timeout=30.0) as client:
-            response = await client.get(settings.dainam_api_url, headers=headers)
+            response = await client.get(endpoint, headers=headers)
             response.raise_for_status()
             return response.json()
 

@@ -1,6 +1,8 @@
 import asyncio
 import sys
 import os
+import time
+import jwt
 
 # Ép hệ thống nhận diện thư mục gốc để tránh lỗi import module
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -16,15 +18,18 @@ async def main():
     print("[Test] Khởi tạo VietnamStockWorker...")
     worker = VietnamStockWorker(supabase_client=supabase)
     
-    print("[Test] Thực hiện vá ép kiểu dữ liệu URL từ AnyHttpUrl sang String thuần...")
-    # Biến đổi object AnyHttpUrl thành chuỗi string thuần để httpx không bị lỗi ép kiểu
-    if settings.dainam_api_url:
-        settings.dainam_api_url = str(settings.dainam_api_url)
+    print("[Test] Sử dụng endpoint DaiNam từ file .env...")
+    if not settings.dainam_api_url:
+        raise RuntimeError("DAINAM_API_URL không được cấu hình trong .env")
+    settings.dainam_api_url = str(settings.dainam_api_url)
+    print(f"[📡 Target URL]: {settings.dainam_api_url}")
+    print("[Test] Worker sẽ dùng endpoint cấu hình để lấy dữ liệu và đẩy lên Supabase...")
     
-    print("[Test] Ép worker bơi ra API lấy dữ liệu và đẩy lên Supabase...")
-    records = await worker.scan()
-    
-    print(f"[Test] Chu kỳ hoàn tất! Đã xử lý và đẩy thành công dữ liệu lên bảng vn_stock_profiles.")
+    try:
+        records = await worker.scan()
+        print(f"[Test] Chu kỳ hoàn tất! Đã xử lý dữ liệu.")
+    except Exception as e:
+        print(f"[Lỗi hệ thống]: {e}")
 
 if __name__ == "__main__":
     asyncio.run(main())
