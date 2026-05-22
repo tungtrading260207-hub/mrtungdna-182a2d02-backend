@@ -79,22 +79,34 @@ class AdvancedRumorHunting:
             else:
                 del self._coinglass_cache[symbol]
 
-        async with AsyncClient(timeout=20.0) as client:
-            await anti_429_delay()
-            response = await client.get(
-                "https://open-api.coinglass.com/api/pro/v1/fundFlow",
-                headers={"coinglassSecret": settings.coinglass_api_key},
-                params={"symbol": symbol},
-            )
+        try:
+            async with AsyncClient(timeout=15.0) as client:
+                await anti_429_delay()
+                response = await client.get(
+                    "https://open-api.coinglass.com/api/pro/v1/fundFlow",
+                    headers={"coinglassSecret": settings.coinglass_api_key},
+                    params={"symbol": symbol},
+                )
 
-            if response.status_code != 200:
-                logging.warning("[RumorHunting] Coinglass request failed for %s: %s", symbol, response.status_code)
-                return None
+                if response.status_code == 429:
+                    logging.warning("[RumorHunting] Coinglass rate limited (429) for %s, applying backoff.", symbol)
+                    await asyncio.sleep(5.0)
+                    return None
 
-            payload = response.json()
-            data = payload.get("data") or payload
-            self._coinglass_cache[symbol] = (data, now + timedelta(minutes=5))
-            return data
+                if response.status_code not in {200, 201, 206}:
+                    logging.warning("[RumorHunting] Coinglass request failed for %s: HTTP %s", symbol, response.status_code)
+                    return None
+
+                payload = response.json()
+                data = payload.get("data") or payload
+                self._coinglass_cache[symbol] = (data, now + timedelta(minutes=5))
+                return data
+        except asyncio.TimeoutError:
+            logging.warning("[RumorHunting] Coinglass timeout for %s (15s limit exceeded).", symbol)
+            return None
+        except Exception as exc:
+            logging.warning("[RumorHunting] Coinglass fetch error for %s: %s", symbol, exc)
+            return None
 
     async def fetch_vn_stock_data(self, symbol: str) -> dict | None:
         if not self.vn_source.base_url:

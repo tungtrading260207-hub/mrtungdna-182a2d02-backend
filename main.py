@@ -40,28 +40,32 @@ async def read_root():
 @app.on_event("startup")
 async def startup_event():
     global rumor_worker, anti_short_worker, analysis_worker, macro_worker, schema_sync_worker
-    logging.info("Starting Mr Tung Python FastAPI worker...")
-    await supabase_client.init_pool()
-    rumor_worker = RumorHuntingWorker(supabase_client)
-    anti_short_worker = AntiTrapShortWorker(supabase_client)
-    analysis_worker = MarketDataAnalysisWorker(supabase_client)
-    macro_worker = MacroDataSchedulerWorker(supabase_client)
-    worker_tasks.append(asyncio.create_task(rumor_worker.start_loop()))
-    worker_tasks.append(asyncio.create_task(anti_short_worker.start_loop()))
-    worker_tasks.append(asyncio.create_task(analysis_worker.start_loop()))
-    worker_tasks.append(asyncio.create_task(macro_worker.start_loop()))
-    if supabase_client._pool:
-        schema_sync_worker = SchemaSyncChecker(
-            supabase_client=supabase_client,
-            dashboard_url=settings.dashboard_alert_url,
-            dashboard_api_key=settings.dashboard_alert_api_key,
-            interval_seconds=settings.schema_sync_interval_seconds,
-        )
-        worker_tasks.append(asyncio.create_task(schema_sync_worker.start_loop()))
-    else:
-        logging.warning("[main] Schema sync worker disabled because SUPABASE_DB_URL is not configured.")
-    worker_tasks.append(asyncio.create_task(no_api_scraper.start_binance_ws_pool()))
-    logging.info("Background workers launched.")
+    try:
+        logging.info("Starting Mr Tung Python FastAPI worker...")
+        await supabase_client.init_pool()
+        rumor_worker = RumorHuntingWorker(supabase_client)
+        anti_short_worker = AntiTrapShortWorker(supabase_client)
+        analysis_worker = MarketDataAnalysisWorker(supabase_client)
+        macro_worker = MacroDataSchedulerWorker(supabase_client)
+        worker_tasks.append(asyncio.create_task(rumor_worker.start_loop()))
+        worker_tasks.append(asyncio.create_task(anti_short_worker.start_loop()))
+        worker_tasks.append(asyncio.create_task(analysis_worker.start_loop()))
+        worker_tasks.append(asyncio.create_task(macro_worker.start_loop()))
+        if supabase_client._pool:
+            schema_sync_worker = SchemaSyncChecker(
+                supabase_client=supabase_client,
+                dashboard_url=settings.dashboard_alert_url,
+                dashboard_api_key=settings.dashboard_alert_api_key,
+                interval_seconds=settings.schema_sync_interval_seconds,
+            )
+            worker_tasks.append(asyncio.create_task(schema_sync_worker.start_loop()))
+        else:
+            logging.warning("[main] Schema sync worker disabled because SUPABASE_DB_URL is not configured.")
+        worker_tasks.append(asyncio.create_task(no_api_scraper.start_binance_ws_pool()))
+        logging.info("Background workers launched.")
+    except Exception as exc:
+        logging.exception("[main] FATAL: Startup failed: %s", exc)
+        raise
 
 @app.on_event("shutdown")
 async def shutdown_event():

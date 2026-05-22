@@ -1,5 +1,7 @@
+import asyncio
 import logging
 from httpx import AsyncClient, HTTPError
+import httpx
 from ..db import SupabaseClient
 from ..config import settings
 
@@ -44,49 +46,64 @@ class AIAnalyzer:
         return base
 
     async def _call_gemini(self, prompt: str) -> str:
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={self.gemini_key}"
-        async with AsyncClient(timeout=30.0) as client:
-            response = await client.post(url, json={"contents": [{"role": "user", "parts": [{"text": prompt}]}]})
-            response.raise_for_status()
-            data = response.json()
-            candidate = data.get("candidates", [{}])[0]
-            text = candidate.get("content", {}).get("parts", [{}])[0].get("text")
-            if not text:
-                raise ValueError("Empty Gemini response")
-            return text.strip()
+        if not self.gemini_key:
+            raise ValueError("Gemini API key not configured")
+        try:
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={self.gemini_key}"
+            async with AsyncClient(timeout=httpx.Timeout(10.0, connect=5.0)) as client:
+                response = await client.post(url, json={"contents": [{"role": "user", "parts": [{"text": prompt}]}]})
+                response.raise_for_status()
+                data = response.json()
+                candidate = data.get("candidates", [{}])[0]
+                text = candidate.get("content", {}).get("parts", [{}])[0].get("text")
+                if not text:
+                    raise ValueError("Empty Gemini response")
+                return text.strip()
+        except asyncio.TimeoutError:
+            raise RuntimeError("Gemini request timeout (10s limit exceeded)")
+        except Exception as exc:
+            raise RuntimeError(f"Gemini API error: {exc}")
 
     async def _call_lovable(self, prompt: str) -> str:
-        url = "https://ai.gateway.lovable.dev/v1/chat/completions"
-        headers = {"Authorization": f"Bearer {self.lovable_key}", "Content-Type": "application/json"}
-        payload = {
-            "model": "google/gemini-2.5-flash",
-            "messages": [
-                {"role": "system", "content": "Bạn là chuyên gia phân tích tài chính MrTung."},
-                {"role": "user", "content": prompt},
-            ],
-        }
-        async with AsyncClient(timeout=30.0) as client:
-            response = await client.post(url, headers=headers, json=payload)
-            response.raise_for_status()
-            data = response.json()
-            candidate = data.get("choices", [{}])[0].get("message", {}).get("content")
-            if not candidate:
-                raise ValueError("Empty Lovable response")
-            return candidate.strip()
+        try:
+            url = "https://ai.gateway.lovable.dev/v1/chat/completions"
+            headers = {"Authorization": f"Bearer {self.lovable_key}", "Content-Type": "application/json"}
+            payload = {
+                "model": "google/gemini-2.5-flash",
+                "messages": [
+                    {"role": "system", "content": "Bạn là chuyên gia phân tích tài chính MrTung."},
+                    {"role": "user", "content": prompt},
+                ],
+            }
+            async with AsyncClient(timeout=httpx.Timeout(10.0, connect=5.0)) as client:
+                response = await client.post(url, headers=headers, json=payload)
+                response.raise_for_status()
+                data = response.json()
+                candidate = data.get("choices", [{}])[0].get("message", {}).get("content")
+                if not candidate:
+                    raise ValueError("Empty Lovable response")
+                return candidate.strip()
+        except asyncio.TimeoutError:
+            raise RuntimeError("Lovable request timeout (10s limit exceeded)")
+        except Exception as exc:
+            raise RuntimeError(f"Lovable API error: {exc}")
 
     async def _call_supabase_function(self, prompt: str) -> str:
-        body = {
-            "messages": [
-                {"role": "system", "content": "Bạn là MrTung Brain, chuyên gia phân tích tài chính."},
-                {"role": "user", "content": prompt},
-            ]
-        }
-        payload = await self.supabase_client.invoke_function("mrtung-chat", method="POST", body=body)
-        if isinstance(payload, dict):
-            if "text" in payload and isinstance(payload["text"], str):
-                return payload["text"].strip()
-            if "data" in payload and isinstance(payload["data"], dict):
-                text = payload["data"].get("text")
-                if isinstance(text, str):
-                    return text.strip()
-        raise ValueError("Supabase function returned invalid AI response")
+        try:
+            body = {
+                "messages": [
+                    {"role": "system", "content": "Bạn là MrTung Brain, chuyên gia phân tích tài chính."},
+                    {"role": "user", "content": prompt},
+                ]
+            }
+            payload = await self.supabase_client.invoke_function("mrtung-chat", method="POST", body=body)
+            if isinstance(payload, dict):
+                if "text" in payload and isinstance(payload["text"], str):
+                    return payload["text"].strip()
+                if "data" in payload and isinstance(payload["data"], dict):
+                    text = payload["data"].get("text")
+                    if isinstance(text, str):
+                        return text.strip()
+            raise ValueError("Supabase function returned invalid AI response")
+        except Exception as exc:
+            raise RuntimeError(f"Supabase function error: {exc}")
