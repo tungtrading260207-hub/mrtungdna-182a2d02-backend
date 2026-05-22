@@ -69,10 +69,30 @@ class MacroDataScheduler:
         if settings.coingecko_api_key:
             headers["x-cg-pro-api-key"] = settings.coingecko_api_key
 
-        async with AsyncClient(timeout=30.0) as client:
-            response = await client.get("https://api.coingecko.com/api/v3/global", headers=headers)
-            response.raise_for_status()
-            data = response.json()
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                async with AsyncClient(timeout=30.0) as client:
+                    response = await client.get("https://api.coingecko.com/api/v3/global", headers=headers)
+                    
+                    if response.status_code == 429:
+                        wait_time = min(60, 5 * (2 ** attempt))  # exponential backoff
+                        logging.warning(f"[MacroScheduler] CoinGecko 429 rate limit, backoff {wait_time}s (attempt {attempt+1}/{max_retries})")
+                        await asyncio.sleep(wait_time)
+                        continue
+                    
+                    response.raise_for_status()
+                    data = response.json()
+                    break
+            except Exception as e:
+                if attempt < max_retries - 1:
+                    logging.warning(f"[MacroScheduler] CoinGecko fetch failed: {e}, retrying...")
+                    await asyncio.sleep(5)
+                else:
+                    logging.error(f"[MacroScheduler] CoinGecko failed after {max_retries} attempts: {e}")
+                    return None
+        else:
+            return None
 
         record = {
             "id": cache_key,

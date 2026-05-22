@@ -4,7 +4,7 @@ from datetime import datetime
 from fastapi import FastAPI, HTTPException
 from app.config import settings
 from app.db import SupabaseClient
-from app.tasks import RumorHuntingWorker, AntiTrapShortWorker, MarketDataAnalysisWorker, MacroDataSchedulerWorker
+from app.tasks import RumorHuntingWorker, AntiTrapShortWorker, MarketDataAnalysisWorker, MacroDataSchedulerWorker, VNStockWorker
 from app.services.no_api_scrapers import NoApiScraper
 from core.schema_sync import SchemaSyncChecker
 
@@ -22,6 +22,7 @@ rumor_worker: RumorHuntingWorker | None = None
 anti_short_worker: AntiTrapShortWorker | None = None
 analysis_worker: MarketDataAnalysisWorker | None = None
 macro_worker: MacroDataSchedulerWorker | None = None
+vn_stock_worker: VNStockWorker | None = None
 schema_sync_worker: SchemaSyncChecker | None = None
 no_api_scraper = NoApiScraper()
 
@@ -39,7 +40,7 @@ async def read_root():
 
 @app.on_event("startup")
 async def startup_event():
-    global rumor_worker, anti_short_worker, analysis_worker, macro_worker, schema_sync_worker
+    global rumor_worker, anti_short_worker, analysis_worker, macro_worker, vn_stock_worker, schema_sync_worker
     try:
         logging.info("Starting Mr Tung Python FastAPI worker...")
         await supabase_client.init_pool()
@@ -47,10 +48,12 @@ async def startup_event():
         anti_short_worker = AntiTrapShortWorker(supabase_client)
         analysis_worker = MarketDataAnalysisWorker(supabase_client)
         macro_worker = MacroDataSchedulerWorker(supabase_client)
+        vn_stock_worker = VNStockWorker(supabase_client)
         worker_tasks.append(asyncio.create_task(rumor_worker.start_loop()))
         worker_tasks.append(asyncio.create_task(anti_short_worker.start_loop()))
         worker_tasks.append(asyncio.create_task(analysis_worker.start_loop()))
         worker_tasks.append(asyncio.create_task(macro_worker.start_loop()))
+        worker_tasks.append(asyncio.create_task(vn_stock_worker.start_loop()))
         if supabase_client._pool:
             schema_sync_worker = SchemaSyncChecker(
                 supabase_client=supabase_client,
@@ -94,6 +97,8 @@ async def trigger_task(task_name: str):
         worker = analysis_worker
     elif task_name == "macro":
         worker = macro_worker
+    elif task_name == "vn_stock":
+        worker = vn_stock_worker
     else:
         raise HTTPException(status_code=404, detail="Unknown task")
 
@@ -116,6 +121,7 @@ async def tasks_status():
         "anti_trap_short": anti_short_worker.status.__dict__ if anti_short_worker else None,
         "market_analysis": analysis_worker.status.__dict__ if analysis_worker else None,
         "macro_scheduler": macro_worker.status.__dict__ if macro_worker else None,
+        "vn_stock_analyzer": vn_stock_worker.status.__dict__ if vn_stock_worker else None,
         "schema_sync": schema_sync_worker.status.__dict__ if schema_sync_worker else None,
     }
 

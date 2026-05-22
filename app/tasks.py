@@ -7,6 +7,7 @@ from .services.rumor_hunting import AdvancedRumorHunting
 from .services.anti_trap_short import AntiTrapShortEngine
 from .services.market_analysis import MarketAnalysisEngine
 from .services.macro_scheduler import MacroDataScheduler
+from .services.vn_stock_analyzer import VNStockAnalyzer
 from .db import SupabaseClient
 
 
@@ -78,3 +79,9 @@ class MacroDataSchedulerWorker(WorkerBase):
     def __init__(self, supabase_client: SupabaseClient, interval_seconds: int = 60):
         super().__init__(supabase_client, interval_seconds)
         self.engine = MacroDataScheduler(self.supabase_client)
+
+
+class VNStockWorker(WorkerBase):
+    def __init__(self, supabase_client: SupabaseClient, interval_seconds: int = 120):
+        super().__init__(supabase_client, interval_seconds)  # Run every 2 min
+        self.engine = VNStockAnalyzer(self.supabase_client)

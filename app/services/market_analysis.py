@@ -150,8 +150,9 @@ class MarketAnalysisEngine:
         # 1. Build Payload Scans an toàn tuyệt đối
         scans_to_db = []
         for item in scan_items:
-            symbol_str = sanitize_str(item.get('symbol', 'UNKNOWN'))
-            rec_id = sanitize_str(item.get('id'))
+            # FIX: build_scan_record() return 'ticker' not 'symbol'
+            symbol_str = sanitize_str(item.get('ticker') or item.get('symbol', 'UNKNOWN'))
+            rec_id = sanitize_str(item.get('id') or symbol_str)
             if rec_id == "0" or rec_id == "": rec_id = symbol_str
 
             scans_to_db.append({
@@ -160,7 +161,8 @@ class MarketAnalysisEngine:
                 "score": sanitize_num(item.get('score')),
                 "price": sanitize_num(item.get('price')),
                 "volume": sanitize_num(item.get('volume')),
-                "signal": sanitize_str(item.get('signal', 'NONE'))
+                "signal": sanitize_str(item.get('signal', 'NONE')),
+                "created_at": sanitize_str(item.get('updated_at'))
             })
 
         scans_to_db, scan_validation_errors = DataValidator.validate_many(MarketScan, scans_to_db)
@@ -172,17 +174,24 @@ class MarketAnalysisEngine:
         # 2. Build Payload Signals an toàn tuyệt đối
         signals_to_db = []
         for item in signal_items:
-            symbol_str = sanitize_str(item.get('symbol', 'UNKNOWN'))
+            symbol_str = sanitize_str(item.get('ticker') or item.get('symbol', 'UNKNOWN'))
             sig_str = sanitize_str(item.get('signal', 'NONE'))
+            timestamp = sanitize_str(item.get('updated_at', ''))
+            # FIX: Make ID unique per cycle to avoid duplicate conflict
             rec_id = sanitize_str(item.get('id'))
-            if rec_id == "0" or rec_id == "": rec_id = f"{symbol_str}_{sig_str}"
+            if rec_id == "0" or rec_id == "" or rec_id == symbol_str:
+                # Add timestamp to ID to make it unique per cycle
+                import hashlib
+                ts_short = timestamp[-8:] if timestamp else "000000"
+                rec_id = f"{symbol_str}_{sig_str}_{ts_short}"
 
             signals_to_db.append({
                 "id": rec_id,
                 "symbol": symbol_str,
                 "signal": sig_str,
                 "score": sanitize_num(item.get('score')),
-                "price": sanitize_num(item.get('price'))
+                "price": sanitize_num(item.get('price')),
+                "created_at": timestamp
             })
 
         signals_to_db, signal_validation_errors = DataValidator.validate_many(MarketSignal, signals_to_db)
