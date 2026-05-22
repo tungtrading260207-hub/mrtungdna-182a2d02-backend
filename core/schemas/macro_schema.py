@@ -1,10 +1,10 @@
 from datetime import datetime
-from typing import Any
+from typing import Any, ClassVar
 from pydantic import BaseModel
 
 
 class MacroIndicator(BaseModel):
-    table_name = "macro_indicators"
+    table_name: ClassVar[str] = "macro_indicators"
 
     id: str
     indicator_name: str
@@ -20,7 +20,7 @@ class MacroIndicator(BaseModel):
 
 
 class SystemHealth(BaseModel):
-    table_name = "system_health"
+    table_name: ClassVar[str] = "system_health"
 
     id: int | None = None
     service: str
@@ -34,7 +34,7 @@ class SystemHealth(BaseModel):
 
 
 class MarketNews(BaseModel):
-    table_name = "market_news"
+    table_name: ClassVar[str] = "market_news"
 
     id: int | None = None
     title: str

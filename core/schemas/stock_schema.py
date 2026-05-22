@@ -1,10 +1,10 @@
 from datetime import datetime
-from typing import Any
+from typing import Any, ClassVar
 from pydantic import BaseModel
 
 
 class VNStockProfile(BaseModel):
-    table_name = "vn_stock_profiles"
+    table_name: ClassVar[str] = "vn_stock_profiles"
 
     id: str
     symbol: str
@@ -18,7 +18,7 @@ class VNStockProfile(BaseModel):
 
 
 class MarketScan(BaseModel):
-    table_name = "market_scans"
+    table_name: ClassVar[str] = "market_scans"
 
     id: str
     symbol: str
@@ -34,7 +34,7 @@ class MarketScan(BaseModel):
 
 
 class MarketSignal(BaseModel):
-    table_name = "market_signals"
+    table_name: ClassVar[str] = "market_signals"
 
     id: str
     symbol: str

@@ -1,10 +1,10 @@
 from datetime import datetime
-from typing import Any
+from typing import Any, ClassVar
 from pydantic import BaseModel
 
 
 class RumorHuntingRecord(BaseModel):
-    table_name = "rumor_hunting_top20"
+    table_name: ClassVar[str] = "rumor_hunting_top20"
 
     id: int | None = None
     ticker: str
@@ -24,7 +24,7 @@ class RumorHuntingRecord(BaseModel):
 
 
 class InverseShortSetup(BaseModel):
-    table_name = "inverse_short_setup"
+    table_name: ClassVar[str] = "inverse_short_setup"
 
     id: int | None = None
     ticker: str
