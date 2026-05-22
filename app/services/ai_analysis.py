@@ -1,31 +1,15 @@
-import asyncio
 import logging
-from httpx import AsyncClient, HTTPError
+from httpx import AsyncClient
 import httpx
 from ..db import SupabaseClient
-from ..config import settings
 
 
 class AIAnalyzer:
     def __init__(self, supabase_client: SupabaseClient):
         self.supabase_client = supabase_client
-        self.gemini_key = settings.gemini_api_key
-        self.lovable_key = settings.lovable_api_key
 
     async def summarize_scan(self, summary: str, context: str | None = None) -> str:
         prompt = self._build_prompt(summary, context)
-        if self.gemini_key:
-            try:
-                return await self._call_gemini(prompt)
-            except Exception as exc:
-                logging.warning("Gemini analysis failed, falling back to API: %s", exc)
-
-        if self.lovable_key:
-            try:
-                return await self._call_lovable(prompt)
-            except Exception as exc:
-                logging.warning("Lovable AI fallback failed: %s", exc)
-
         try:
             return await self._call_supabase_function(prompt)
         except Exception as exc:
@@ -45,48 +29,6 @@ class AIAnalyzer:
         base += f"\n\nDữ liệu thô:\n{summary}\n\nTóm tắt trong 2-3 câu."
         return base
 
-    async def _call_gemini(self, prompt: str) -> str:
-        if not self.gemini_key:
-            raise ValueError("Gemini API key not configured")
-        try:
-            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={self.gemini_key}"
-            async with AsyncClient(timeout=httpx.Timeout(10.0, connect=5.0)) as client:
-                response = await client.post(url, json={"contents": [{"role": "user", "parts": [{"text": prompt}]}]})
-                response.raise_for_status()
-                data = response.json()
-                candidate = data.get("candidates", [{}])[0]
-                text = candidate.get("content", {}).get("parts", [{}])[0].get("text")
-                if not text:
-                    raise ValueError("Empty Gemini response")
-                return text.strip()
-        except asyncio.TimeoutError:
-            raise RuntimeError("Gemini request timeout (10s limit exceeded)")
-        except Exception as exc:
-            raise RuntimeError(f"Gemini API error: {exc}")
-
-    async def _call_lovable(self, prompt: str) -> str:
-        try:
-            url = "https://ai.gateway.lovable.dev/v1/chat/completions"
-            headers = {"Authorization": f"Bearer {self.lovable_key}", "Content-Type": "application/json"}
-            payload = {
-                "model": "google/gemini-2.5-flash",
-                "messages": [
-                    {"role": "system", "content": "Bạn là chuyên gia phân tích tài chính MrTung."},
-                    {"role": "user", "content": prompt},
-                ],
-            }
-            async with AsyncClient(timeout=httpx.Timeout(10.0, connect=5.0)) as client:
-                response = await client.post(url, headers=headers, json=payload)
-                response.raise_for_status()
-                data = response.json()
-                candidate = data.get("choices", [{}])[0].get("message", {}).get("content")
-                if not candidate:
-                    raise ValueError("Empty Lovable response")
-                return candidate.strip()
-        except asyncio.TimeoutError:
-            raise RuntimeError("Lovable request timeout (10s limit exceeded)")
-        except Exception as exc:
-            raise RuntimeError(f"Lovable API error: {exc}")
 
     async def _call_supabase_function(self, prompt: str) -> str:
         try:

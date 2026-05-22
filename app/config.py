@@ -24,11 +24,6 @@ class Settings(BaseSettings):
         None,
         validation_alias=AliasChoices("coinglass_api_key", "COINGLASS_API_KEY", "VITE_COINGLASS_API_KEY"),
     )
-    gemini_api_key: str | None = Field(
-        None,
-        validation_alias=AliasChoices("gemini_api_key", "GEMINI_API_KEY", "VITE_GEMINI_API_KEY"),
-    )
-    lovable_api_key: str | None = None
     news_api_key: str | None = None
     news_api_url: str | None = None
     coingecko_api_key: str | None = Field(

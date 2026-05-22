@@ -2,7 +2,7 @@
 Diagnostic script to identify operational issues:
 1. Auto-startup failure: Check if workers launch successfully
 2. Rate limiting: Verify 429 handling and backoff
-3. External API timeouts: Test Gemini, Lovable, Coinglass resilience
+3. External API timeouts: Test Coinglass resilience
 """
 
 import asyncio
@@ -78,58 +78,6 @@ async def test_external_apis():
     logger.info("=" * 60)
     logger.info("TEST 2: External API Resilience (Timeouts & Errors)")
     logger.info("=" * 60)
-
-    # Test Gemini API
-    logger.info("Testing Gemini API (10s timeout)...")
-    if settings.gemini_api_key:
-        try:
-            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={settings.gemini_api_key}"
-            payload = {
-                "contents": [
-                    {
-                        "role": "user",
-                        "parts": [{"text": "Hello, respond with one word."}],
-                    }
-                ]
-            }
-            async with AsyncClient(timeout=10.0) as client:
-                response = await client.post(url, json=payload)
-                response.raise_for_status()
-                logger.info(f"✓ Gemini API responded with status {response.status_code}")
-        except TimeoutException:
-            logger.warning("⚠ Gemini API timed out (expected behavior)")
-        except HTTPStatusError as e:
-            logger.warning(f"⚠ Gemini API HTTP error: {e.response.status_code} {e.response.reason_phrase}")
-        except Exception as e:
-            logger.error(f"✗ Gemini API error: {e}")
-    else:
-        logger.warning("⚠ Gemini API key not configured, skipping")
-
-    # Test Lovable API
-    logger.info("Testing Lovable API (10s timeout)...")
-    if settings.lovable_api_key:
-        try:
-            url = "https://ai.gateway.lovable.dev/v1/chat/completions"
-            headers = {
-                "Authorization": f"Bearer {settings.lovable_api_key}",
-                "Content-Type": "application/json",
-            }
-            payload = {
-                "model": "google/gemini-2.5-flash",
-                "messages": [{"role": "user", "content": "Hi, respond with one word."}],
-            }
-            async with AsyncClient(timeout=10.0) as client:
-                response = await client.post(url, headers=headers, json=payload)
-                response.raise_for_status()
-                logger.info(f"✓ Lovable API responded with status {response.status_code}")
-        except TimeoutException:
-            logger.warning("⚠ Lovable API timed out (expected behavior)")
-        except HTTPStatusError as e:
-            logger.warning(f"⚠ Lovable API HTTP error: {e.response.status_code} {e.response.reason_phrase}")
-        except Exception as e:
-            logger.error(f"✗ Lovable API error: {e}")
-    else:
-        logger.warning("⚠ Lovable API key not configured, skipping")
 
     # Test Coinglass API
     logger.info("Testing Coinglass API (15s timeout + 429 handling)...")
