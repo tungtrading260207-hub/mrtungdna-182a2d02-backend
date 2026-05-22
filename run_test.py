@@ -16,11 +16,11 @@ async def main():
     print("[Test] Khởi tạo VietnamStockWorker...")
     worker = VietnamStockWorker(supabase_client=supabase)
     
-    print("[Test] Ép worker bơi ra API Đại Nam cào dữ liệu và đẩy lên Supabase...")
-    # Gọi thẳng hàm scan tích hợp sẵn của VietnamStockWorker
-    records = await worker.scan()
+    print("[Test] Ép worker chạy một chu kỳ quét dữ liệu thực tế...")
+    # Gọi chính xác hàm chạy chu kỳ của Worker để kích hoạt luồng cào Đại Nam và đẩy Supabase
+    await worker._run_cycle()
     
-    print(f"[Test] Chu kỳ hoàn tất! Đã xử lý và đẩy {len(records)} mã lên bảng vn_stock_profiles.")
+    print("[Test] Chu kỳ chạy thử hoàn tất! Anh quay lại kiểm tra bảng trên Supabase nhé.")
 
 if __name__ == "__main__":
     asyncio.run(main())
