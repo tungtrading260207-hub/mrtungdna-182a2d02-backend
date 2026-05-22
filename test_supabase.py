@@ -1,24 +1,24 @@
 import asyncio
+import sys
 import os
-import httpx
+
+# Ép hệ thống nhận diện thư mục gốc để không bao giờ bị lỗi Module
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
+from app.db import SupabaseClient
 from app.config import settings
+from app.tasks.vietnam_stock_worker import VietnamStockWorker
 
 async def main():
-    supabase_url = str(settings.supabase_url).rstrip("/")
-    api_key = settings.supabase_service_key
+    print("[Test] Đang khởi tạo kết nối Supabase...")
+    supabase = SupabaseClient(settings.supabase_url, settings.supabase_service_key)
     
-    headers = {
-        "apikey": api_key,
-        "Authorization": f"Bearer {api_key}",
-        "Content-Type": "application/json",
-    }
+    print("[Test] Đang ép VietnamStockWorker chạy một chu kỳ quét dữ liệu (Bỏ qua giờ giao dịch)...")
+    worker = VietnamStockWorker(supabase_client=supabase)
     
-    async with httpx.AsyncClient() as client:
-        # Requesting table list or checking if we can insert to trading_logs
-        res = await client.get(f"{supabase_url}/rest/v1/", headers=headers)
-        print(res.status_code)
-        if res.status_code == 200:
-            print(res.json())
+    # Gọi thẳng hàm scan và xử lý ghi dữ liệu của worker
+    records = await worker.scan()
+    print(f"[Test] Chu kỳ hoàn tất! Đã xử lý và đẩy {len(records)} mã cổ phiếu lên Supabase.")
 
 if __name__ == "__main__":
     asyncio.run(main())
