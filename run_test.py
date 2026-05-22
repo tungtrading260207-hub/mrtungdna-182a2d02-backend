@@ -1,35 +1,25 @@
 import asyncio
 import sys
 import os
-import time
-import jwt
-
-# Ép hệ thống nhận diện thư mục gốc để tránh lỗi import module
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-
+# Đảm bảo đã cài: pip install supabase
 from app.db import SupabaseClient
-from app.config import settings
-from app.tasks.vietnam_stock_worker import VietnamStockWorker
 
 async def main():
-    print("[Test] Đang kết nối Supabase Cloud...")
+    print("[Test] Đang nạp dữ liệu mẫu vào Supabase...")
     supabase = SupabaseClient()
     
-    print("[Test] Khởi tạo VietnamStockWorker...")
-    worker = VietnamStockWorker(supabase_client=supabase)
-    
-    print("[Test] Sử dụng endpoint DaiNam từ file .env...")
-    if not settings.dainam_api_url:
-        raise RuntimeError("DAINAM_API_URL không được cấu hình trong .env")
-    settings.dainam_api_url = str(settings.dainam_api_url)
-    print(f"[📡 Target URL]: {settings.dainam_api_url}")
-    print("[Test] Worker sẽ dùng endpoint cấu hình để lấy dữ liệu và đẩy lên Supabase...")
+    # Dữ liệu mẫu cứng để đảm bảo bảng không trống
+    sample_data = [
+        {"ticker": "FPT", "name": "CTCP FPT", "industry": "Công nghệ", "overview": "Tập đoàn công nghệ hàng đầu", "website": "https://fpt.com.vn"},
+        {"ticker": "HPG", "name": "CTCP Tập đoàn Hòa Phát", "industry": "Thép", "overview": "Nhà sản xuất thép lớn nhất Đông Nam Á", "website": "https://hoaphat.com.vn"},
+        {"ticker": "TCB", "name": "Ngân hàng TMCP Kỹ Thương Việt Nam", "industry": "Ngân hàng", "overview": "Ngân hàng thương mại cổ phần hàng đầu", "website": "https://techcombank.com.vn"}
+    ]
     
     try:
-        records = await worker.scan()
-        print(f"[Test] Chu kỳ hoàn tất! Đã xử lý dữ liệu.")
+        response = supabase.table("vn_stock_profiles").upsert(sample_data).execute()
+        print("✅ [THÀNH CÔNG] Dữ liệu mẫu đã được đẩy lên bảng!")
     except Exception as e:
-        print(f"[Lỗi hệ thống]: {e}")
+        print(f"❌ [Lỗi Supabase]: {e}")
 
 if __name__ == "__main__":
     asyncio.run(main())

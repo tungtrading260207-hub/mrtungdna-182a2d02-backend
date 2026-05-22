@@ -37,3 +37,65 @@ create table if not exists Inverse_Short_Setup (
 
 create index if not exists idx_inverse_short_ticker on Inverse_Short_Setup (ticker);
 create index if not exists idx_inverse_short_score on Inverse_Short_Setup (analysis_score desc);
+
+create table if not exists market_scans (
+    id text primary key,
+    symbol text not null,
+    score numeric(8,2),
+    price numeric(20,8),
+    volume numeric(20,8),
+    signal text,
+    created_at timestamptz default now()
+);
+
+create index if not exists idx_market_scans_symbol on market_scans (symbol);
+create index if not exists idx_market_scans_score on market_scans (score desc);
+
+create table if not exists market_signals (
+    id text primary key,
+    symbol text not null,
+    signal text,
+    score numeric(8,2),
+    price numeric(20,8),
+    created_at timestamptz default now()
+);
+
+create index if not exists idx_market_signals_symbol on market_signals (symbol);
+create index if not exists idx_market_signals_score on market_signals (score desc);
+
+create table if not exists vn_stock_profiles (
+    id text primary key,
+    symbol text,
+    source text,
+    payload jsonb,
+    updated_at timestamptz,
+    created_at timestamptz default now()
+);
+create index if not exists idx_vn_stock_profiles_symbol on vn_stock_profiles (symbol);
+
+create table if not exists system_health (
+    id bigserial primary key,
+    service text,
+    status text,
+    message text,
+    checked_at timestamptz default now()
+);
+
+create table if not exists market_news (
+    id bigserial primary key,
+    title text,
+    summary text,
+    source text,
+    url text,
+    published_at timestamptz,
+    created_at timestamptz default now()
+);
+
+create table if not exists macro_indicators (
+    id bigserial primary key,
+    indicator_name text,
+    value numeric(20,8),
+    timeframe text,
+    source text,
+    created_at timestamptz default now()
+);

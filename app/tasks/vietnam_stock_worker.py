@@ -40,18 +40,19 @@ class VietnamStockWorker(WorkerBase):
         return records
 
     async def fetch_vietnam_stock_data(self) -> dict | list[dict] | None:
-        api_url = str(settings.dainam_api_url).strip()
-        if api_url.endswith("/"):
-            api_url = api_url[:-1]
+        api_url = str(settings.dainam_api_url).strip().rstrip("/")
+        endpoints = []
 
         if settings.dainam_api_path:
-            endpoint = f"{api_url}/{str(settings.dainam_api_path).strip().lstrip('/')}"
-        elif api_url.lower().endswith("/v1"):
-            endpoint = f"{api_url}/market/symbols"
-        elif api_url.lower().endswith("/lightspeed/v1"):
-            endpoint = f"{api_url}/market/symbols"
+            endpoints.append(f"{api_url}/{str(settings.dainam_api_path).strip().lstrip('/')}")
         else:
-            endpoint = api_url
+            endpoints.extend([
+                api_url,
+                f"{api_url}/market/symbols",
+                f"{api_url}/symbols",
+                f"{api_url}/market/tickers",
+                f"{api_url}/tickers",
+            ])
 
         headers = {
             "Authorization": f"Bearer {settings.dainam_api_key}",
@@ -61,9 +62,21 @@ class VietnamStockWorker(WorkerBase):
             headers["X-API-SECRET"] = settings.dainam_api_secret
 
         async with AsyncClient(timeout=30.0) as client:
-            response = await client.get(endpoint, headers=headers)
-            response.raise_for_status()
-            return response.json()
+            last_error = None
+            for endpoint in endpoints:
+                try:
+                    response = await client.get(endpoint, headers=headers)
+                    if response.status_code == 404:
+                        logging.debug("[VietnamStockWorker] Endpoint not found: %s", endpoint)
+                        continue
+                    response.raise_for_status()
+                    return response.json()
+                except Exception as exc:
+                    last_error = exc
+                    logging.debug("[VietnamStockWorker] Failed endpoint %s: %s", endpoint, exc)
+            if last_error:
+                raise last_error
+            return None
 
     def normalize_records(self, payload: dict | list[dict] | None) -> list[dict]:
         if payload is None:
@@ -83,10 +96,13 @@ class VietnamStockWorker(WorkerBase):
                 continue
 
             symbol = item.get("symbol") or item.get("code") or item.get("ticker") or item.get("id") or f"vn_{idx}"
-            record = {**item}
-            record["id"] = symbol
-            record["source"] = "DaiNam_DNS"
-            record["updated_at"] = datetime.now(timezone.utc).isoformat()
+            record = {
+                "id": symbol,
+                "symbol": symbol,
+                "source": settings.dns_source_label,
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+                "payload": item,
+            }
             records.append(record)
 
         return records
