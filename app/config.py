@@ -70,8 +70,8 @@ class Settings(BaseSettings):
         "DaiNam_DNS",
         validation_alias=AliasChoices("dns_source_label", "DNS_SOURCE_LABEL"),
     )
-    rumour_table: str = Field("Rumor_Hunting_Top20")
-    inverse_short_table: str = Field("Inverse_Short_Setup")
+    rumour_table: str = Field("rumor_hunting_top20")
+    inverse_short_table: str = Field("inverse_short_setup")
     rate_limit_min: float = Field(3.0, validation_alias="BINANCE_RATE_LIMIT_SECONDS_MIN")
     rate_limit_max: float = Field(5.0, validation_alias="BINANCE_RATE_LIMIT_SECONDS_MAX")
     cache_time_realtime_slow: int = Field(

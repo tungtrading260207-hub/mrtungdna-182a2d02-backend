@@ -118,19 +118,21 @@ async def trigger_market_analysis():
 @app.get("/data/{table_name}")
 async def fetch_table_data(table_name: str, limit: int = 20, order_by: str | None = None):
     allowed_tables = {
-        "Rumor_Hunting_Top20",
-        "Inverse_Short_Setup",
+        "rumor_hunting_top20",
+        "inverse_short_setup",
         "system_health",
         "market_scans",
         "market_signals",
         "market_news",
         "macro_indicators",
+        "vn_stock_profiles",
     }
-    if table_name not in allowed_tables:
+    normalized_name = table_name.strip().lower()
+    if normalized_name not in allowed_tables:
         raise HTTPException(status_code=403, detail="Table access restricted")
     return {
-        "table": table_name,
-        "rows": await supabase_client.fetch_rows(table_name, limit=limit, order_by=order_by),
+        "table": normalized_name,
+        "rows": await supabase_client.fetch_rows(normalized_name, limit=limit, order_by=order_by),
     }
 
 

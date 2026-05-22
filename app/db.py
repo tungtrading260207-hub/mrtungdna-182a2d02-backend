@@ -68,7 +68,8 @@ class SupabaseClient:
         return rows
 
     async def _insert_rest(self, table: str, rows: list[dict]):
-        response = await self._rest_client.post(f"/{table}", json=rows, params={"return": "minimal"})
+        table_name = table.strip().lower()
+        response = await self._rest_client.post(f"/{table_name}", json=rows, params={"return": "minimal"})
         response.raise_for_status()
         return []
 
@@ -80,11 +81,12 @@ class SupabaseClient:
                 rows = await conn.fetch(sql, limit)
                 return [dict(row) for row in rows]
 
+        table_name = table.strip().lower()
         params = {"select": "*", "limit": limit}
         if order_by:
             params["order"] = order_by
 
-        response = await self._rest_client.get(f"/{table}", params=params)
+        response = await self._rest_client.get(f"/{table_name}", params=params)
         response.raise_for_status()
         return response.json()
 
@@ -129,8 +131,9 @@ class SupabaseClient:
                     await conn.executemany(sql, [tuple(row[col] for col in columns) for row in rows])
             return rows
 
+        table_name = table.strip().lower()
         response = await self._rest_client.post(
-            f"/{table}",
+            f"/{table_name}",
             json=rows,
             params={"on_conflict": conflict, "return": "minimal"},
         )

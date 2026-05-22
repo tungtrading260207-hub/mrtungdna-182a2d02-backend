@@ -36,7 +36,7 @@ class VietnamStockWorker(WorkerBase):
         if not records:
             return []
 
-        await self.supabase_client.upsert_rows("vn_market_scans", records, conflict="id")
+        await self.supabase_client.upsert_rows("vn_stock_profiles", records, conflict="id")
         return records
 
     async def fetch_vietnam_stock_data(self) -> dict | list[dict] | None:
